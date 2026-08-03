@@ -20,7 +20,6 @@ export function WordRegisterForm({ deckId, knownTags }: WordRegisterFormProps) {
 
   const [term, setTerm] = useState('');
   const [meaning, setMeaning] = useState('');
-  const [example, setExample] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
 
@@ -37,12 +36,10 @@ export function WordRegisterForm({ deckId, knownTags }: WordRegisterFormProps) {
       deckId,
       term,
       meaning,
-      example,
       tags: [...new Set([...tags, ...typed])],
     });
     setTerm('');
     setMeaning('');
-    setExample('');
     setTags([]);
     setTagInput('');
   };
@@ -58,12 +55,6 @@ export function WordRegisterForm({ deckId, knownTags }: WordRegisterFormProps) {
         autoCorrect={false}
       />
       <TextField value={meaning} onChangeText={setMeaning} placeholder="뜻 (예: 버리다, 포기하다)" />
-      <TextField
-        value={example}
-        onChangeText={setExample}
-        placeholder="예문 (선택)"
-        autoCapitalize="none"
-      />
 
       {knownTags.length > 0 ? (
         <View style={styles.tagRow}>

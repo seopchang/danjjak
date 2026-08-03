@@ -10,7 +10,6 @@ interface AddWordInput {
   deckId: string;
   term: string;
   meaning: string;
-  example: string;
   tags: string[];
 }
 
@@ -42,7 +41,6 @@ export const useWordsStore = create<WordsState>()(
           deckId: input.deckId,
           term: input.term.trim(),
           meaning: input.meaning.trim(),
-          example: input.example.trim(),
           tags: input.tags,
           status: '미암기',
           isFavorite: false,

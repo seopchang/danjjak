@@ -34,6 +34,13 @@
           "image": "./assets/images/app-icon.png",
           "imageWidth": 160
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#111111",
+          "defaultChannel": "daily-review"
+        }
       ]
     ],
     "experiments": {

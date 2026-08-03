@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { router } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -10,47 +10,40 @@ import { Screen } from '@/components/common/screen';
 import { ThemedText } from '@/components/themed-text';
 import { SlideDirection, useFlashCardMotion } from '@/hooks/use-flash-card-motion';
 import { useTheme } from '@/hooks/use-theme';
+import { useDecksStore } from '@/stores/decks-store';
 import { useSessionsStore } from '@/stores/sessions-store';
-import { deckWords, useWordsStore } from '@/stores/words-store';
-import { shuffled } from '@/utils/shuffle';
+import { useWordsStore } from '@/stores/words-store';
+import { buildDailyReviewQueue, DAILY_REVIEW_LIMIT } from '@/utils/review-queue';
 
-export default function StudyModeScreen() {
-  const { deckId, mode, shuffle, favorites } = useLocalSearchParams<{
-    deckId: string;
-    mode: 'memorize' | 'review';
-    shuffle?: string;
-    favorites?: string;
-  }>();
+interface Answer {
+  wordId: string;
+  deckId: string;
+  isCorrect: boolean;
+}
+
+/**
+ * 매일 복습 화면.
+ *
+ * 덱을 가리지 않고 전체 단어에서 "미암기 먼저, 그 다음 본 지 오래된 순"으로
+ * 최대 50개를 뽑아 한 번에 훑는다. 자정 알림을 눌렀을 때 열리는 화면이기도 하다.
+ */
+export default function DailyReviewScreen() {
   const theme = useTheme();
   const allWords = useWordsStore((s) => s.words);
   const markStatus = useWordsStore((s) => s.markStatus);
+  const decks = useDecksStore((s) => s.decks);
   const addSession = useSessionsStore((s) => s.addSession);
 
-  const isMemorize = mode === 'memorize';
-  const targetStatus = isMemorize ? '미암기' : '암기완료';
-
   // 큐는 화면에 들어온 시점에 한 번만 정한다.
-  // (학습 처리로 status가 바뀌어도 목록이 도중에 흔들리지 않게 하기 위함)
-  const [queue] = useState(() => {
-    let targets = deckWords(allWords, deckId).filter((w) => w.status === targetStatus);
-    if (favorites === '1') targets = targets.filter((w) => w.isFavorite);
-    if (!isMemorize) {
-      // 복습: 마지막 학습일이 오래된 순 (한 번도 복습 안 한 단어가 먼저)
-      targets = [...targets].sort((a, b) =>
-        (a.lastReviewedAt ?? '').localeCompare(b.lastReviewedAt ?? '')
-      );
-    }
-    const ids = targets.map((w) => w.id);
-    return shuffle === '1' ? shuffled(ids) : ids;
-  });
+  const [queue] = useState(() => buildDailyReviewQueue(allWords).map((w) => w.id));
 
   const startedAt = useRef(Date.now());
+  const answers = useRef<Answer[]>([]);
   const [index, setIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const [correctCount, setCorrectCount] = useState(0);
   const [incorrectCount, setIncorrectCount] = useState(0);
   const [finished, setFinished] = useState(false);
-  // 카드가 넘어가는 중에는 버튼을 두 번 누르지 못하게 막는다.
   const [sliding, setSliding] = useState(false);
 
   const { cardStyle, meaningStyle, slideOut, slideIn, settle } = useFlashCardMotion(revealed);
@@ -60,36 +53,57 @@ export default function StudyModeScreen() {
     [allWords, queue, index]
   );
 
-  const finishSession = (testedCount: number, correct: number, incorrect: number) => {
-    if (!finished && correct + incorrect > 0) {
+  const deckName = useMemo(() => {
+    if (!currentWord) return '';
+    return decks.find((d) => d.id === currentWord.deckId)?.name ?? '';
+  }, [decks, currentWord]);
+
+  /**
+   * 여러 덱의 단어가 섞여 있으므로 덱별로 나눠 학습 기록을 남긴다.
+   * (StudySession은 덱 하나에 속하는 구조라 통계 화면이 덱 단위로 읽는다)
+   */
+  const finishReview = () => {
+    if (finished) return;
+    setFinished(true);
+
+    const byDeck = new Map<string, Answer[]>();
+    for (const answer of answers.current) {
+      const list = byDeck.get(answer.deckId);
+      if (list) list.push(answer);
+      else byDeck.set(answer.deckId, [answer]);
+    }
+
+    const durationSeconds = Math.round((Date.now() - startedAt.current) / 1000);
+    for (const [deckId, list] of byDeck) {
+      const correct = list.filter((a) => a.isCorrect).length;
+      const incorrect = list.length - correct;
       addSession({
         deckId,
-        type: isMemorize ? '암기' : '복습',
+        type: '복습',
         date: new Date().toISOString(),
-        testedWordIds: queue.slice(0, testedCount),
+        testedWordIds: list.map((a) => a.wordId),
         correctCount: correct,
         incorrectCount: incorrect,
-        accuracy: Math.round((correct / (correct + incorrect)) * 100),
-        durationSeconds: Math.round((Date.now() - startedAt.current) / 1000),
-        scopeLabel: `${isMemorize ? '암기' : '복습'} 테스트${favorites === '1' ? ' (즐겨찾기)' : ''}`,
+        accuracy: list.length > 0 ? Math.round((correct / list.length) * 100) : 0,
+        durationSeconds,
+        scopeLabel: '매일 복습',
       });
     }
-    setFinished(true);
   };
 
-  /** 카드가 빠져나간 뒤 실제 채점과 다음 카드 진입을 처리한다. */
   const commitAction = (isCorrect: boolean, direction: SlideDirection) => {
     const word = allWords.find((w) => w.id === queue[index]);
-    if (word) markStatus(word.id, isCorrect ? '암기완료' : '미암기');
+    if (word) {
+      markStatus(word.id, isCorrect ? '암기완료' : '미암기');
+      answers.current.push({ wordId: word.id, deckId: word.deckId, isCorrect });
+    }
 
-    const nextCorrect = correctCount + (isCorrect ? 1 : 0);
-    const nextIncorrect = incorrectCount + (isCorrect ? 0 : 1);
-    setCorrectCount(nextCorrect);
-    setIncorrectCount(nextIncorrect);
+    setCorrectCount((c) => c + (isCorrect ? 1 : 0));
+    setIncorrectCount((c) => c + (isCorrect ? 0 : 1));
     setRevealed(false);
 
     if (index + 1 >= queue.length) {
-      finishSession(index + 1, nextCorrect, nextIncorrect);
+      finishReview();
       settle();
     } else {
       setIndex((i) => i + 1);
@@ -101,31 +115,32 @@ export default function StudyModeScreen() {
   const handleAction = (isCorrect: boolean) => {
     if (!currentWord || sliding) return;
     setSliding(true);
-    // 아는 단어는 왼쪽으로, 모르는 단어는 오른쪽으로 밀려난다.
     const direction: SlideDirection = isCorrect ? -1 : 1;
     slideOut(direction, () => commitAction(isCorrect, direction));
   };
-
-  const modeLabel = isMemorize ? '암기하기' : '복습하기';
 
   if (queue.length === 0 || finished || !currentWord) {
     return (
       <Screen>
         <View style={styles.header}>
           <IconButton name="chevron-back" onPress={() => router.back()} size={24} />
-          <ThemedText type="smallBold">{modeLabel} 모드</ThemedText>
+          <ThemedText type="smallBold">매일 복습</ThemedText>
           <View style={{ width: 24 }} />
         </View>
         <Card>
           <ThemedText type="smallBold">
-            {queue.length === 0 ? '학습할 단어가 없습니다.' : '학습을 완료했습니다.'}
+            {queue.length === 0 ? '복습할 단어가 없습니다.' : '오늘 복습을 마쳤습니다.'}
           </ThemedText>
-          {finished ? (
+          {queue.length === 0 ? (
             <ThemedText type="small" themeColor="textSecondary">
-              {isMemorize ? '암기 완료' : '기억함'} {correctCount}개 · 미암기 {incorrectCount}개
+              단어장에 단어를 먼저 등록해주세요.
             </ThemedText>
-          ) : null}
-          <Button label="모드 종료" onPress={() => router.back()} />
+          ) : (
+            <ThemedText type="small" themeColor="textSecondary">
+              기억함 {correctCount}개 · 미암기 {incorrectCount}개
+            </ThemedText>
+          )}
+          <Button label="단어장으로" onPress={() => router.replace('/')} />
         </Card>
       </Screen>
     );
@@ -135,15 +150,13 @@ export default function StudyModeScreen() {
     <Screen>
       <View style={styles.header}>
         <IconButton name="chevron-back" onPress={() => router.back()} size={24} />
-        <ThemedText type="smallBold">{modeLabel} 모드</ThemedText>
+        <ThemedText type="smallBold">매일 복습</ThemedText>
         <View style={{ width: 24 }} />
       </View>
 
       <Card style={{ backgroundColor: theme.backgroundElement }}>
         <ThemedText type="small">
-          {isMemorize
-            ? '암기하기 모드: 미암기 단어만 나옵니다. 뜻 확인 후 암기 완료 또는 미암기로 처리하세요.'
-            : '복습하기 모드: 오래 안 본 단어부터 나옵니다. 뜻 확인 후 기억함 또는 미암기로 처리하세요.'}
+          미암기 단어를 먼저, 그다음 본 지 오래된 단어를 최대 {DAILY_REVIEW_LIMIT}개까지 모았습니다.
         </ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
           진행률 {index + 1}/{queue.length}
@@ -152,6 +165,11 @@ export default function StudyModeScreen() {
 
       <Animated.View style={cardStyle}>
         <Card style={styles.wordCard}>
+          {deckName ? (
+            <ThemedText type="small" themeColor="textSecondary">
+              {deckName}
+            </ThemedText>
+          ) : null}
           <ThemedText type="title" style={styles.term}>
             {currentWord.term}
           </ThemedText>
@@ -173,7 +191,7 @@ export default function StudyModeScreen() {
 
       <View style={styles.actionRow}>
         <Button
-          label={isMemorize ? '암기 완료' : '기억함'}
+          label="기억함"
           variant="primary"
           onPress={() => handleAction(true)}
           style={styles.actionButton}
@@ -186,11 +204,7 @@ export default function StudyModeScreen() {
         />
       </View>
 
-      <Button
-        label="학습 모드 종료"
-        variant="ghost"
-        onPress={() => finishSession(index, correctCount, incorrectCount)}
-      />
+      <Button label="복습 종료" variant="ghost" onPress={finishReview} />
     </Screen>
   );
 }

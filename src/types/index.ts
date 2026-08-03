@@ -27,7 +27,6 @@ export interface Word extends Syncable {
   deckId: string;
   term: string;
   meaning: string;
-  example: string;
   tags: string[];
   status: WordStatus;
   isFavorite: boolean;

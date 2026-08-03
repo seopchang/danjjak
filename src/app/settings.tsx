@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, Switch, View } from 'react-native';
 
 import { Button } from '@/components/common/button';
 import { Card } from '@/components/common/card';
@@ -8,9 +8,25 @@ import { IconButton } from '@/components/common/icon-button';
 import { Screen } from '@/components/common/screen';
 import { TextField } from '@/components/common/text-field';
 import { ThemedText } from '@/components/themed-text';
+import { useTheme } from '@/hooks/use-theme';
 import { isFirebaseConfigured } from '@/lib/firebase';
+import {
+  cancelDailyReviewReminder,
+  REVIEW_HOUR,
+  REVIEW_MINUTE,
+  scheduleDailyReviewReminder,
+} from '@/lib/notifications';
 import { useAuthStore } from '@/stores/auth-store';
+import { useSettingsStore } from '@/stores/settings-store';
 import { useSyncStore } from '@/stores/sync-store';
+import { DAILY_REVIEW_LIMIT } from '@/utils/review-queue';
+
+/** "0시 0분" 같은 표기 */
+function formatReminderTime(): string {
+  const hour = String(REVIEW_HOUR).padStart(2, '0');
+  const minute = String(REVIEW_MINUTE).padStart(2, '0');
+  return `${hour}:${minute}`;
+}
 
 export default function SettingsScreen() {
   const uid = useAuthStore((s) => s.uid);
@@ -22,10 +38,37 @@ export default function SettingsScreen() {
   const logOut = useAuthStore((s) => s.logOut);
   const clearError = useAuthStore((s) => s.clearError);
   const resetSync = useSyncStore((s) => s.reset);
+  const theme = useTheme();
+
+  const reminderEnabled = useSettingsStore((s) => s.reviewReminderEnabled);
+  const setReminderEnabled = useSettingsStore((s) => s.setReviewReminderEnabled);
 
   const [mode, setMode] = useState<'signIn' | 'signUp'>('signIn');
   const [inputEmail, setInputEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [reminderBusy, setReminderBusy] = useState(false);
+
+  const handleToggleReminder = async (next: boolean) => {
+    setReminderBusy(true);
+    try {
+      if (!next) {
+        await cancelDailyReviewReminder();
+        setReminderEnabled(false);
+        return;
+      }
+
+      const scheduled = await scheduleDailyReviewReminder();
+      setReminderEnabled(scheduled);
+      if (!scheduled) {
+        Alert.alert(
+          '알림 권한이 필요합니다',
+          '휴대폰 설정 → 앱 → 보카덱 → 알림에서 알림을 허용해주세요.'
+        );
+      }
+    } finally {
+      setReminderBusy(false);
+    }
+  };
 
   const canSubmit = inputEmail.trim().length > 0 && password.length > 0 && !busy;
 
@@ -142,6 +185,27 @@ export default function SettingsScreen() {
       )}
 
       <Card>
+        <View style={styles.switchRow}>
+          <View style={styles.switchLabel}>
+            <ThemedText type="smallBold">매일 복습 알림</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              매일 {formatReminderTime()}에 복습하라고 알려줍니다.
+            </ThemedText>
+          </View>
+          <Switch
+            value={reminderEnabled}
+            onValueChange={handleToggleReminder}
+            disabled={reminderBusy}
+            trackColor={{ true: theme.primary, false: theme.border }}
+          />
+        </View>
+        <ThemedText type="small" themeColor="textSecondary">
+          알림을 누르면 미암기 단어를 먼저, 그다음 본 지 오래된 단어를 최대 {DAILY_REVIEW_LIMIT}개까지
+          모아 바로 복습을 시작합니다.
+        </ThemedText>
+      </Card>
+
+      <Card>
         <ThemedText type="smallBold">동기화 방식</ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
           이 앱은 항상 기기 안에 먼저 저장합니다. 인터넷이 없어도 단어 등록과 학습이 그대로
@@ -160,5 +224,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  switchLabel: {
+    flex: 1,
+    gap: 2,
   },
 });

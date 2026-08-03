@@ -39,7 +39,6 @@ export function WordListRow({
   const [draft, setDraft] = useState({
     term: word.term,
     meaning: word.meaning,
-    example: word.example,
     tags: word.tags.join(', '),
   });
 
@@ -49,7 +48,6 @@ export function WordListRow({
     onUpdate({
       term: draft.term.trim(),
       meaning: draft.meaning.trim(),
-      example: draft.example.trim(),
       tags: parseTags(draft.tags),
     });
     setEditing(false);
@@ -60,7 +58,6 @@ export function WordListRow({
     setDraft({
       term: word.term,
       meaning: word.meaning,
-      example: word.example,
       tags: word.tags.join(', '),
     });
     setEditing(true);
@@ -117,11 +114,6 @@ export function WordListRow({
             placeholder="뜻"
           />
           <TextField
-            value={draft.example}
-            onChangeText={(example) => setDraft((d) => ({ ...d, example }))}
-            placeholder="예문"
-          />
-          <TextField
             value={draft.tags}
             onChangeText={(tags) => setDraft((d) => ({ ...d, tags }))}
             placeholder="태그 (쉼표로 구분)"
@@ -138,11 +130,6 @@ export function WordListRow({
               {revealed ? word.meaning : '뜻 가림 · 눌러서 표시'}
             </ThemedText>
           </Pressable>
-          {revealed && word.example ? (
-            <ThemedText type="small" themeColor="textSecondary">
-              {word.example}
-            </ThemedText>
-          ) : null}
         </>
       )}
 
