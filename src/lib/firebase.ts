@@ -1,6 +1,17 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+// 주의: 'firebase/auth'(우산 패키지)가 아니라 '@firebase/auth'에서 직접 가져온다.
+// 우산 패키지의 export map에는 "react-native" 조건이 없어서 Metro가 웹 빌드를
+// 골라버리고, 그러면 React Native 전용인 getReactNativePersistence가 없어
+// 앱 시작과 동시에 "is not a function"으로 죽는다.
+// '@firebase/auth'는 "react-native" 조건과 레거시 필드를 모두 갖고 있어
+// dist/rn 빌드로 정확히 해석된다. (자세한 경위는 AGENTS.md 참고)
+import {
+  Auth,
+  getAuth,
+  getReactNativePersistence,
+  initializeAuth,
+} from '@firebase/auth';
 import { FirebaseApp, getApp, getApps, initializeApp } from 'firebase/app';
-import { Auth, getReactNativePersistence, initializeAuth } from 'firebase/auth';
 import { Firestore, getFirestore } from 'firebase/firestore';
 
 /**
@@ -38,13 +49,33 @@ function getFirebaseApp(): FirebaseApp {
 /**
  * React Native에서는 getAuth() 대신 initializeAuth()로 AsyncStorage 퍼시스턴스를
  * 명시해야 앱을 껐다 켜도 로그인이 유지된다.
+ *
+ * 다만 번들러가 Firebase의 웹 빌드를 골라버리면 getReactNativePersistence 자체가
+ * 존재하지 않는다(metro.config.js에서 막고 있지만 환경에 따라 또 어긋날 수 있다).
+ * 그 경우에도 앱이 죽지 않도록 기본 인스턴스로 물러난다.
+ * 물러난 경우 로그인 상태가 앱 재시작 시 유지되지 않을 뿐, 나머지는 정상 동작한다.
  */
 export function getFirebaseAuth(): Auth {
-  if (!auth) {
-    auth = initializeAuth(getFirebaseApp(), {
-      persistence: getReactNativePersistence(AsyncStorage),
-    });
+  if (auth) return auth;
+
+  const app = getFirebaseApp();
+  if (typeof getReactNativePersistence === 'function') {
+    try {
+      auth = initializeAuth(app, {
+        persistence: getReactNativePersistence(AsyncStorage),
+      });
+      return auth;
+    } catch {
+      // 이미 initializeAuth가 호출된 경우 등 — 아래 기본 인스턴스로 처리한다.
+    }
+  } else if (__DEV__) {
+    console.warn(
+      '[firebase] getReactNativePersistence를 찾지 못했습니다. ' +
+        '로그인 상태가 앱 재시작 시 유지되지 않습니다.'
+    );
   }
+
+  auth = getAuth(app);
   return auth;
 }
 

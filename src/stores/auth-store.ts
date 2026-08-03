@@ -1,9 +1,11 @@
+// firebase.ts와 같은 모듈 인스턴스를 쓰기 위해 여기서도 '@firebase/auth'에서 가져온다.
+// (한쪽만 'firebase/auth'를 쓰면 Auth 인스턴스가 서로 달라질 수 있다)
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut,
-} from 'firebase/auth';
+} from '@firebase/auth';
 import { create } from 'zustand';
 
 import { getFirebaseAuth, isFirebaseConfigured } from '@/lib/firebase';
