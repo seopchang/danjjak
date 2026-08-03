@@ -75,14 +75,17 @@ StudySession { id, deckId, type(암기|복습|리콜), date, testedWordIds[],
 
 - `npx tsc --noEmit` 통과.
 - ⚠️ **실기기 확인 아직 안 됨** — 사용자가 폰으로 보면서 조정할 예정.
-- ⚠️ **Firebase 프로젝트 아직 안 만듦** — 사용자가 콘솔에서 직접 만들어야 함(구글 계정 필요, 자동화 불가). 만들기 전까지 앱은 **로컬 전용 모드**로 동작하며 단어장 기능은 전부 정상. README "Firebase 연동" 절에 순서 정리됨.
-  - 만든 뒤 `.env.example` → `.env` 복사 후 값 채우고 `npx expo start --clear` 재시작.
-  - Firestore 규칙은 `firestore.rules` 내용을 콘솔에 붙여넣어야 함.
+- Firebase 프로젝트 `vocadeck` 생성됨 (2026-08-03, 사용자가 콘솔에서 직접 — 구글 계정 필요해 자동화 불가).
+  - Firestore: Standard 버전, `(default)` DB, **위치 asia-northeast3(서울)** — 위치는 변경 불가.
+  - 보안 규칙: `firestore.rules` 내용으로 교체 후 게시 완료.
+  - ⏳ 남은 것: 웹 앱(`</>`) 등록해서 config 받기 → `.env` 채우기 → `npx expo start --clear` 재시작.
+- **Firebase 콘솔 UI가 개편됨**: 예전 "빌드" 메뉴 없음. 좌측 **제품 카테고리 → 데이터베이스 및 스토리지 → Firestore Database** 경로로 들어가야 함.
+- `.env`가 없으면 앱은 **로컬 전용 모드**로 동작하며 단어장 기능은 전부 정상. (`isFirebaseConfigured()` 가드)
 
 ## 5. TypeScript 함정 (건드리면 깨짐)
 
 - `src/types/firebase-auth.d.ts`: `getReactNativePersistence`는 `@firebase/auth`의 `react-native` export 조건에만 있는데 export map의 `types` 조건이 먼저 매칭돼서 TS가 못 찾음. 런타임엔 Metro가 올바르게 해석하므로 타입만 보강해둔 것. **이 파일 지우면 tsc 깨짐.**
-- `expo-env.d.ts`: `process.env` 타입에 필요. study-app의 .gitignore에는 이 파일이 무시 대상이었으나, 여기서는 **커밋해야** 새 세션에서 clone 직후 tsc가 통과함.
+- `src/types/env.d.ts`: `process.env.EXPO_PUBLIC_*` 타입 선언. Expo가 만드는 `expo-env.d.ts`에도 같은 타입이 있지만, **개발 서버를 켜면 expo-cli가 `.gitignore`를 재생성하면서 그 파일을 다시 무시 목록에 넣음** → clone 직후에는 존재하지 않음. 도구와 싸우는 대신 실제로 쓰는 키만 직접 선언해 커밋해둠. **이 파일 지우면 clone 직후 tsc가 깨짐.** (expo-env.d.ts 유무 양쪽에서 tsc 통과 확인함)
 
 ## 6. 작업 방식 메모
 
