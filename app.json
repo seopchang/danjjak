@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "보카덱",
+    "slug": "vocadeck",
+    "version": "1.0.0",
+    "orientation": "default",
+    "scheme": "vocadeck",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.beomclass.vocadeck"
+    },
+    "android": {
+      "package": "com.beomclass.vocadeck",
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FFFFFF",
+          "dark": {
+            "backgroundColor": "#0B0B0B"
+          },
+          "imageWidth": 200
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
