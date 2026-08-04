@@ -55,6 +55,17 @@ function errorCodeOf(e: unknown): string {
   return 'unknown';
 }
 
+/**
+ * 사용자에게는 다듬은 한국어만 보여주지만, 그러면 원인 파악이 막힌다.
+ * (특히 network-request-failed 는 인터넷 문제 말고도 SSL·설정 문제로도 뜬다)
+ * 개발 중에는 원본 코드와 메시지를 그대로 남긴다.
+ */
+function logAuthError(action: string, e: unknown): void {
+  if (!__DEV__) return;
+  const detail = typeof e === 'object' && e !== null && 'message' in e ? (e as Error).message : e;
+  console.warn(`[auth] ${action} 실패 — code=${errorCodeOf(e)} message=${detail}`);
+}
+
 let unsubscribe: (() => void) | null = null;
 
 export const useAuthStore = create<AuthState>()((set) => ({
@@ -87,6 +98,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
       set({ busy: false });
       return true;
     } catch (e) {
+      logAuthError('로그인', e);
       set({ busy: false, error: toKoreanMessage(errorCodeOf(e)) });
       return false;
     }
@@ -99,6 +111,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
       set({ busy: false });
       return true;
     } catch (e) {
+      logAuthError('계정 만들기', e);
       set({ busy: false, error: toKoreanMessage(errorCodeOf(e)) });
       return false;
     }
