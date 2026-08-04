@@ -1,7 +1,18 @@
+import {
+  JetBrainsMono_500Medium,
+  JetBrainsMono_600SemiBold,
+  JetBrainsMono_700Bold,
+} from '@expo-google-fonts/jetbrains-mono';
+import {
+  SpaceGrotesk_500Medium,
+  SpaceGrotesk_600SemiBold,
+  SpaceGrotesk_700Bold,
+} from '@expo-google-fonts/space-grotesk';
+import { useFonts } from 'expo-font';
 import * as Notifications from 'expo-notifications';
-import { DarkTheme, DefaultTheme, router, Stack, ThemeProvider } from 'expo-router';
+import { DefaultTheme, router, Stack, ThemeProvider } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import { useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { configureNotificationHandler } from '@/lib/notifications';
@@ -10,9 +21,23 @@ import { useAuthStore } from '@/stores/auth-store';
 // 앱이 떠 있는 동안에도 알림 배너를 띄운다. 모듈 로드 시점에 한 번만 걸면 된다.
 configureNotificationHandler();
 
+// 폰트가 준비되기 전에 화면이 보이면 글자가 한 번 튀므로 스플래시를 붙잡아둔다.
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
   const initAuth = useAuthStore((s) => s.init);
+
+  // Space Grotesk / JetBrains Mono 는 라틴 전용이라 한글은 Pretendard 가 받는다.
+  const [fontsLoaded, fontError] = useFonts({
+    SpaceGrotesk_500Medium,
+    SpaceGrotesk_600SemiBold,
+    SpaceGrotesk_700Bold,
+    JetBrainsMono_500Medium,
+    JetBrainsMono_600SemiBold,
+    JetBrainsMono_700Bold,
+    'Pretendard-Regular': require('../../assets/fonts/Pretendard-Regular.ttf'),
+    'Pretendard-Bold': require('../../assets/fonts/Pretendard-Bold.ttf'),
+  });
 
   // Firebase 로그인 상태 복원은 앱 시작 시 한 번만 구독한다.
   useEffect(() => {
@@ -28,9 +53,18 @@ export default function RootLayout() {
     return () => subscription.remove();
   }, []);
 
+  // 폰트 로드가 끝났거나 실패했으면 스플래시를 내린다.
+  // 실패해도 앱은 시스템 폰트로 그대로 뜨게 둔다.
+  useEffect(() => {
+    if (fontsLoaded || fontError) SplashScreen.hideAsync().catch(() => {});
+  }, [fontsLoaded, fontError]);
+
+  if (!fontsLoaded && !fontError) return null;
+
   return (
     <SafeAreaProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      {/* 라이트 고정 — 시스템이 다크여도 흑백 팔레트를 그대로 쓴다. */}
+      <ThemeProvider value={DefaultTheme}>
         <Stack screenOptions={{ headerShown: false }} />
       </ThemeProvider>
     </SafeAreaProvider>

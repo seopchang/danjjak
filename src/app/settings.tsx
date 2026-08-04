@@ -1,14 +1,13 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, StyleSheet, Switch, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/common/button';
-import { Card } from '@/components/common/card';
-import { IconButton } from '@/components/common/icon-button';
 import { Screen } from '@/components/common/screen';
+import { SquareSwitch } from '@/components/common/square-switch';
 import { TextField } from '@/components/common/text-field';
 import { ThemedText } from '@/components/themed-text';
-import { useTheme } from '@/hooks/use-theme';
+import { Border, Colors } from '@/constants/theme';
 import { isFirebaseConfigured } from '@/lib/firebase';
 import {
   cancelDailyReviewReminder,
@@ -21,7 +20,9 @@ import { useSettingsStore } from '@/stores/settings-store';
 import { useSyncStore } from '@/stores/sync-store';
 import { DAILY_REVIEW_LIMIT } from '@/utils/review-queue';
 
-/** "0시 0분" 같은 표기 */
+const theme = Colors.light;
+
+/** "00:00" 같은 표기 */
 function formatReminderTime(): string {
   const hour = String(REVIEW_HOUR).padStart(2, '0');
   const minute = String(REVIEW_MINUTE).padStart(2, '0');
@@ -38,7 +39,6 @@ export default function SettingsScreen() {
   const logOut = useAuthStore((s) => s.logOut);
   const clearError = useAuthStore((s) => s.clearError);
   const resetSync = useSyncStore((s) => s.reset);
-  const theme = useTheme();
 
   const reminderEnabled = useSettingsStore((s) => s.reviewReminderEnabled);
   const setReminderEnabled = useSettingsStore((s) => s.setReviewReminderEnabled);
@@ -73,9 +73,8 @@ export default function SettingsScreen() {
   const canSubmit = inputEmail.trim().length > 0 && password.length > 0 && !busy;
 
   const handleSubmit = async () => {
-    const ok = mode === 'signIn'
-      ? await signIn(inputEmail, password)
-      : await signUp(inputEmail, password);
+    const ok =
+      mode === 'signIn' ? await signIn(inputEmail, password) : await signUp(inputEmail, password);
     if (ok) {
       // 계정이 바뀌었을 수 있으니 동기화 기준점을 비워 전체를 다시 받아온다.
       resetSync();
@@ -100,40 +99,37 @@ export default function SettingsScreen() {
   return (
     <Screen>
       <View style={styles.header}>
-        <IconButton name="chevron-back" onPress={() => router.back()} size={24} />
-        <ThemedText type="smallBold">설정</ThemedText>
-        <View style={{ width: 24 }} />
+        <Pressable onPress={() => router.back()} hitSlop={10}>
+          <ThemedText type="screenTitle">←</ThemedText>
+        </Pressable>
+        <ThemedText type="screenTitle">설정</ThemedText>
+        <View style={styles.headerSpacer} />
       </View>
 
       {!isFirebaseConfigured() ? (
-        <Card>
-          <ThemedText type="smallBold">동기화가 설정되지 않았습니다</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            지금은 이 기기에만 저장하는 로컬 전용 모드입니다. 단어장 기능은 모두 정상적으로
-            쓸 수 있습니다.
+        <View style={styles.section}>
+          <ThemedText type="sectionHeading">동기화가 설정되지 않았습니다</ThemedText>
+          <ThemedText type="body" themeColor="textSecondary">
+            이 기기에만 저장됩니다.
           </ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            폰과 패드를 함께 쓰려면 Firebase 프로젝트를 만들고 프로젝트 루트의 .env 파일에
-            설정값을 넣어주세요. 자세한 방법은 README.md에 있습니다.
-          </ThemedText>
-        </Card>
+        </View>
       ) : uid ? (
-        <Card>
-          <ThemedText type="smallBold">로그인됨</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
+        <View style={styles.section}>
+          <ThemedText type="sectionHeading">로그인됨</ThemedText>
+          <ThemedText type="body" themeColor="textSecondary">
             {email}
           </ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
+          <ThemedText type="body" themeColor="textSecondary">
             다른 기기에서도 같은 계정으로 로그인한 뒤 동기화 버튼을 누르면 단어장이 합쳐집니다.
           </ThemedText>
           <Button label="로그아웃" variant="ghost" onPress={handleLogOut} />
-        </Card>
+        </View>
       ) : (
-        <Card>
-          <ThemedText type="smallBold">
+        <View style={styles.section}>
+          <ThemedText type="sectionHeading">
             {mode === 'signIn' ? '로그인' : '새 계정 만들기'}
           </ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
+          <ThemedText type="body" themeColor="textSecondary">
             폰과 패드에서 같은 계정으로 로그인하면 단어장을 함께 볼 수 있습니다.
           </ThemedText>
 
@@ -163,7 +159,7 @@ export default function SettingsScreen() {
           />
 
           {error ? (
-            <ThemedText type="small" themeColor="danger">
+            <ThemedText type="body" style={{ color: theme.inkMuted }}>
               {error}
             </ThemedText>
           ) : null}
@@ -181,40 +177,39 @@ export default function SettingsScreen() {
               clearError();
             }}
           />
-        </Card>
+        </View>
       )}
 
-      <Card>
+      <View style={styles.section}>
         <View style={styles.switchRow}>
           <View style={styles.switchLabel}>
-            <ThemedText type="smallBold">매일 복습 알림</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
+            <ThemedText type="sectionHeading">매일 복습 알림</ThemedText>
+            <ThemedText type="body" themeColor="textSecondary">
               매일 {formatReminderTime()}에 복습하라고 알려줍니다.
             </ThemedText>
           </View>
-          <Switch
+          <SquareSwitch
             value={reminderEnabled}
             onValueChange={handleToggleReminder}
             disabled={reminderBusy}
-            trackColor={{ true: theme.primary, false: theme.border }}
           />
         </View>
-        <ThemedText type="small" themeColor="textSecondary">
-          알림을 누르면 미암기 단어를 먼저, 그다음 본 지 오래된 단어를 최대 {DAILY_REVIEW_LIMIT}개까지
-          모아 바로 복습을 시작합니다.
+        <ThemedText type="caption" themeColor="textSecondary">
+          미암기 단어를 먼저, 그다음 오래된 단어 순으로 최대 {DAILY_REVIEW_LIMIT}개를 모아 복습을
+          시작합니다.
         </ThemedText>
-      </Card>
+      </View>
 
-      <Card>
-        <ThemedText type="smallBold">동기화 방식</ThemedText>
-        <ThemedText type="small" themeColor="textSecondary">
+      <View style={styles.lastSection}>
+        <ThemedText type="sectionHeading">동기화 방식</ThemedText>
+        <ThemedText type="body" themeColor="textSecondary">
           이 앱은 항상 기기 안에 먼저 저장합니다. 인터넷이 없어도 단어 등록과 학습이 그대로
-          동작하고, 동기화 버튼을 눌렀을 때만 서버와 주고받습니다.
+          동작합니다.
         </ThemedText>
-        <ThemedText type="small" themeColor="textSecondary">
+        <ThemedText type="body" themeColor="textSecondary">
           같은 단어를 두 기기에서 각각 고쳤다면 나중에 고친 쪽이 남습니다.
         </ThemedText>
-      </Card>
+      </View>
     </Screen>
   );
 }
@@ -224,6 +219,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    borderBottomWidth: Border.strong,
+    borderBottomColor: theme.ink,
+    paddingBottom: 24,
+    marginBottom: 24,
+  },
+  headerSpacer: {
+    width: 24,
+  },
+  section: {
+    gap: 10,
+    borderBottomWidth: Border.hair,
+    borderBottomColor: theme.line,
+    paddingBottom: 24,
+    marginBottom: 24,
+  },
+  lastSection: {
+    gap: 10,
   },
   switchRow: {
     flexDirection: 'row',
@@ -233,6 +245,6 @@ const styles = StyleSheet.create({
   },
   switchLabel: {
     flex: 1,
-    gap: 2,
+    gap: 4,
   },
 });

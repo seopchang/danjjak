@@ -2,9 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, ViewStyle } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
+import { Border } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-type Variant = 'primary' | 'secondary' | 'danger' | 'ghost';
+/** `secondary` 는 리뉴얼 이전 이름 — `outline` 과 같다. */
+type Variant = 'primary' | 'outline' | 'secondary' | 'danger' | 'ghost';
 
 interface ButtonProps {
   label: string;
@@ -17,16 +19,18 @@ interface ButtonProps {
 
 export function Button({ label, onPress, variant = 'primary', icon, disabled, style }: ButtonProps) {
   const theme = useTheme();
+  const isOutline = variant === 'outline' || variant === 'secondary';
 
   const background =
-    variant === 'primary'
-      ? theme.primary
-      : variant === 'danger'
-        ? theme.danger
-        : variant === 'ghost'
-          ? 'transparent'
-          : theme.backgroundElement;
-  const textColor = variant === 'primary' || variant === 'danger' ? theme.primaryText : theme.text;
+    variant === 'primary' ? theme.ink : variant === 'danger' ? theme.inkMuted : 'transparent';
+  const borderColor =
+    variant === 'primary' ? theme.ink : variant === 'danger' ? theme.inkMuted : theme.ink;
+  const textColor =
+    variant === 'primary' || variant === 'danger'
+      ? theme.onInk
+      : variant === 'ghost'
+        ? theme.textSecondary
+        : theme.ink;
 
   return (
     <Pressable
@@ -34,12 +38,15 @@ export function Button({ label, onPress, variant = 'primary', icon, disabled, st
       disabled={disabled}
       style={({ pressed }) => [
         styles.base,
-        { backgroundColor: background, opacity: disabled ? 0.4 : pressed ? 0.75 : 1 },
-        variant === 'ghost' && { borderWidth: 1, borderColor: theme.border },
+        variant === 'ghost' ? styles.ghost : { backgroundColor: background, borderColor },
+        // 비활성은 색을 바꾸지 않고 투명도만 낮춘다 (스펙 2.1)
+        { opacity: disabled ? 0.35 : pressed ? 0.7 : 1 },
         style,
       ]}>
-      {icon ? <Ionicons name={icon} size={18} color={textColor} /> : null}
-      <ThemedText type="smallBold" style={{ color: textColor }}>
+      {icon ? <Ionicons name={icon} size={16} color={textColor} /> : null}
+      <ThemedText
+        type={variant === 'ghost' ? 'caption' : 'button'}
+        style={[{ color: textColor }, variant === 'ghost' && styles.ghostLabel]}>
         {label}
       </ThemedText>
     </Pressable>
@@ -52,8 +59,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 12,
+    paddingVertical: 13,
     paddingHorizontal: 16,
-    borderRadius: 12,
+    borderWidth: Border.strong,
+    borderRadius: 0,
+  },
+  ghost: {
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    paddingVertical: 8,
+  },
+  ghostLabel: {
+    textDecorationLine: 'underline',
   },
 });

@@ -1,19 +1,19 @@
 import { router } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import { Button } from '@/components/common/button';
-import { Card } from '@/components/common/card';
-import { IconButton } from '@/components/common/icon-button';
 import { Screen } from '@/components/common/screen';
 import { ThemedText } from '@/components/themed-text';
+import { Border, Colors } from '@/constants/theme';
 import { SlideDirection, useFlashCardMotion } from '@/hooks/use-flash-card-motion';
-import { useTheme } from '@/hooks/use-theme';
 import { useDecksStore } from '@/stores/decks-store';
 import { useSessionsStore } from '@/stores/sessions-store';
 import { useWordsStore } from '@/stores/words-store';
 import { buildDailyReviewQueue, DAILY_REVIEW_LIMIT } from '@/utils/review-queue';
+
+const theme = Colors.light;
 
 interface Answer {
   wordId: string;
@@ -28,7 +28,6 @@ interface Answer {
  * 최대 50개를 뽑아 한 번에 훑는다. 자정 알림을 눌렀을 때 열리는 화면이기도 하다.
  */
 export default function DailyReviewScreen() {
-  const theme = useTheme();
   const allWords = useWordsStore((s) => s.words);
   const markStatus = useWordsStore((s) => s.markStatus);
   const decks = useDecksStore((s) => s.decks);
@@ -119,74 +118,84 @@ export default function DailyReviewScreen() {
     slideOut(direction, () => commitAction(isCorrect, direction));
   };
 
+  const Header = () => (
+    <View style={styles.header}>
+      <Pressable onPress={() => router.back()} hitSlop={10}>
+        <ThemedText type="screenTitle">←</ThemedText>
+      </Pressable>
+      <ThemedText type="screenTitle">매일 복습</ThemedText>
+      <View style={styles.headerSpacer} />
+    </View>
+  );
+
   if (queue.length === 0 || finished || !currentWord) {
+    const nothingToReview = queue.length === 0;
     return (
       <Screen>
-        <View style={styles.header}>
-          <IconButton name="chevron-back" onPress={() => router.back()} size={24} />
-          <ThemedText type="smallBold">매일 복습</ThemedText>
-          <View style={{ width: 24 }} />
-        </View>
-        <Card>
-          <ThemedText type="smallBold">
-            {queue.length === 0 ? '복습할 단어가 없습니다.' : '오늘 복습을 마쳤습니다.'}
+        <Header />
+        <View style={styles.summary}>
+          {!nothingToReview ? (
+            <Image
+              source={require('../../assets/illustrations/complete-badge.png')}
+              style={styles.summaryArt}
+              resizeMode="contain"
+            />
+          ) : null}
+          <ThemedText type="sectionHeading" style={styles.summaryTitle}>
+            {nothingToReview ? '복습할 단어가 없습니다.' : '오늘 복습을 마쳤습니다.'}
           </ThemedText>
-          {queue.length === 0 ? (
-            <ThemedText type="small" themeColor="textSecondary">
-              단어장에 단어를 먼저 등록해주세요.
-            </ThemedText>
-          ) : (
-            <ThemedText type="small" themeColor="textSecondary">
-              기억함 {correctCount}개 · 미암기 {incorrectCount}개
-            </ThemedText>
-          )}
-          <Button label="단어장으로" onPress={() => router.replace('/')} />
-        </Card>
+          <ThemedText type="body" themeColor="textSecondary" style={styles.summaryResult}>
+            {nothingToReview
+              ? '단어장에 단어를 먼저 등록해주세요.'
+              : `기억함 ${correctCount}개 · 미암기 ${incorrectCount}개`}
+          </ThemedText>
+          <Button
+            label="단어장으로"
+            onPress={() => router.replace('/')}
+            style={styles.summaryButton}
+          />
+        </View>
       </Screen>
     );
   }
 
   return (
     <Screen>
-      <View style={styles.header}>
-        <IconButton name="chevron-back" onPress={() => router.back()} size={24} />
-        <ThemedText type="smallBold">매일 복습</ThemedText>
-        <View style={{ width: 24 }} />
+      <Header />
+
+      <View style={styles.guide}>
+        <ThemedText type="caption">
+          미암기 단어를 먼저, 그다음 오래된 단어 순으로 최대 {DAILY_REVIEW_LIMIT}개를 모았어요.
+        </ThemedText>
+        <ThemedText type="metaSemi" themeColor="textSecondary">
+          {index + 1}/{queue.length}
+        </ThemedText>
       </View>
 
-      <Card style={{ backgroundColor: theme.backgroundElement }}>
-        <ThemedText type="small">
-          미암기 단어를 먼저, 그다음 본 지 오래된 단어를 최대 {DAILY_REVIEW_LIMIT}개까지 모았습니다.
-        </ThemedText>
-        <ThemedText type="small" themeColor="textSecondary">
-          진행률 {index + 1}/{queue.length}
-        </ThemedText>
-      </Card>
-
       <Animated.View style={cardStyle}>
-        <Card style={styles.wordCard}>
+        <View style={styles.wordCard}>
           {deckName ? (
-            <ThemedText type="small" themeColor="textSecondary">
+            <ThemedText type="labelKo" themeColor="textSecondary" style={styles.deckName}>
               {deckName}
             </ThemedText>
           ) : null}
-          <ThemedText type="title" style={styles.term}>
+          <ThemedText type="term" style={styles.term}>
             {currentWord.term}
           </ThemedText>
-          <Pressable
-            onPress={() => setRevealed((v) => !v)}
-            style={[styles.meaningBox, { borderColor: theme.border }]}>
+          <Pressable onPress={() => setRevealed((v) => !v)} style={styles.meaningBox}>
             {revealed ? (
               <Animated.View style={meaningStyle}>
-                <ThemedText type="default">{currentWord.meaning}</ThemedText>
+                <ThemedText type="body" style={styles.meaningText}>
+                  {currentWord.meaning}
+                </ThemedText>
               </Animated.View>
             ) : (
-              <ThemedText type="default" themeColor="placeholder">
+              <ThemedText type="body" themeColor="textTertiary" style={styles.meaningText}>
                 뜻 가림 · 눌러서 표시
               </ThemedText>
             )}
           </Pressable>
-        </Card>
+        </View>
       </Animated.View>
 
       <View style={styles.actionRow}>
@@ -214,29 +223,79 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    borderBottomWidth: Border.strong,
+    borderBottomColor: theme.ink,
+    paddingBottom: 24,
+    marginBottom: 24,
   },
+  headerSpacer: {
+    width: 24,
+  },
+
+  guide: {
+    borderLeftWidth: Border.strong,
+    borderLeftColor: theme.ink,
+    paddingLeft: 14,
+    paddingVertical: 4,
+    gap: 6,
+    marginBottom: 24,
+  },
+
   wordCard: {
+    borderWidth: Border.strong,
+    borderColor: theme.ink,
+    borderRadius: 0,
+    paddingVertical: 44,
+    paddingHorizontal: 20,
     alignItems: 'center',
-    paddingVertical: 32,
+    gap: 18,
+  },
+  deckName: {
+    fontSize: 11,
+    letterSpacing: 0.5,
   },
   term: {
-    fontSize: 32,
-    lineHeight: 40,
     textAlign: 'center',
   },
   meaningBox: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 16,
+    borderWidth: Border.hair,
+    borderColor: theme.ink,
+    borderRadius: 0,
+    paddingHorizontal: 18,
     paddingVertical: 12,
     minWidth: 160,
     alignItems: 'center',
   },
+  meaningText: {
+    textAlign: 'center',
+  },
+
   actionRow: {
     flexDirection: 'row',
     gap: 8,
+    marginTop: 24,
+    marginBottom: 8,
   },
   actionButton: {
     flex: 1,
+  },
+
+  summary: {
+    gap: 14,
+    paddingVertical: 12,
+  },
+  summaryArt: {
+    width: 88,
+    height: 88,
+    alignSelf: 'center',
+  },
+  summaryTitle: {
+    textAlign: 'center',
+  },
+  summaryResult: {
+    textAlign: 'center',
+  },
+  summaryButton: {
+    marginTop: 4,
   },
 });

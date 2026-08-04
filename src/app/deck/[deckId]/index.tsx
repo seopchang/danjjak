@@ -1,26 +1,23 @@
-import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Alert, Image, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { Button } from '@/components/common/button';
-import { Card } from '@/components/common/card';
 import { Chip } from '@/components/common/chip';
-import { IconButton } from '@/components/common/icon-button';
 import { Screen } from '@/components/common/screen';
 import { TextField } from '@/components/common/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { WordListRow } from '@/components/vocab/word-list-row';
 import { WordRegisterForm } from '@/components/vocab/word-register-form';
-import { useTheme } from '@/hooks/use-theme';
+import { Border, Colors } from '@/constants/theme';
 import { useDecksStore } from '@/stores/decks-store';
 import { deckWords, useWordsStore } from '@/stores/words-store';
 
 const PAGE_SIZE = 20;
+const theme = Colors.light;
 
 export default function DeckDetailScreen() {
   const { deckId } = useLocalSearchParams<{ deckId: string }>();
-  const theme = useTheme();
   const { width } = useWindowDimensions();
   const isWide = width >= 768;
 
@@ -77,14 +74,16 @@ export default function DeckDetailScreen() {
     return (
       <Screen>
         <View style={styles.header}>
-          <IconButton name="chevron-back" onPress={() => router.back()} size={24} />
-          <ThemedText type="smallBold">단어장</ThemedText>
-          <View style={{ width: 24 }} />
+          <Pressable onPress={() => router.back()} hitSlop={10}>
+            <ThemedText type="screenTitle">←</ThemedText>
+          </Pressable>
+          <ThemedText type="screenTitle" style={styles.title}>
+            단어장
+          </ThemedText>
+          <View style={styles.headerSpacer} />
         </View>
-        <Card>
-          <ThemedText type="smallBold">단어장을 찾을 수 없습니다.</ThemedText>
-          <Button label="목록으로" onPress={() => router.replace('/')} />
-        </Card>
+        <ThemedText type="bodyBold">단어장을 찾을 수 없습니다.</ThemedText>
+        <Button label="목록으로" onPress={() => router.replace('/')} style={styles.backButton} />
       </Screen>
     );
   }
@@ -112,53 +111,67 @@ export default function DeckDetailScreen() {
   return (
     <Screen>
       <View style={styles.header}>
-        <IconButton name="chevron-back" onPress={() => router.back()} size={24} />
-        <ThemedText type="smallBold" style={styles.title} numberOfLines={1}>
+        <Pressable onPress={() => router.back()} hitSlop={10}>
+          <ThemedText type="screenTitle">←</ThemedText>
+        </Pressable>
+        <ThemedText type="screenTitle" style={styles.title} numberOfLines={1}>
           {deck.name}
         </ThemedText>
-        <IconButton
-          name="stats-chart-outline"
-          onPress={() => router.push(`/deck/${deckId}/stats`)}
-          size={22}
-        />
+        <Pressable
+          style={styles.headerAction}
+          onPress={() => router.push(`/deck/${deckId}/stats`)}>
+          <Image
+            source={require('../../../../assets/illustrations/icon-stats.png')}
+            style={styles.headerIcon}
+            resizeMode="contain"
+          />
+          <ThemedText type="labelKo" themeColor="textSecondary" style={styles.headerActionLabel}>
+            통계
+          </ThemedText>
+        </Pressable>
       </View>
 
-      <Card>
-        <ThemedText type="smallBold">학습 시작</ThemedText>
+      <View style={styles.studyBlock}>
+        <ThemedText type="sectionHeading">학습 시작</ThemedText>
         <View style={styles.countsRow}>
-          <ThemedText type="small" themeColor="textSecondary">
+          <ThemedText type="caption" themeColor="textSecondary" style={styles.countText}>
             암기 대상 {memorizeCount}개
           </ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
+          <ThemedText type="caption" themeColor="textSecondary" style={styles.countText}>
             복습 대상 {reviewCount}개
           </ThemedText>
         </View>
-        <View style={styles.optionRow}>
+
+        {/* 옵션 칩은 서로 붙여 배치하고 겹치는 테두리는 1px로 둔다 */}
+        <View style={styles.chipJoinRow}>
           <Chip label="랜덤 섞기" selected={shuffle} onPress={() => setShuffle((v) => !v)} />
-          <Chip
-            label="즐겨찾기만"
-            selected={studyFavoritesOnly}
-            onPress={() => setStudyFavoritesOnly((v) => !v)}
-          />
+          <View style={styles.chipJoined}>
+            <Chip
+              label="즐겨찾기만"
+              selected={studyFavoritesOnly}
+              onPress={() => setStudyFavoritesOnly((v) => !v)}
+            />
+          </View>
         </View>
+
         <View style={styles.buttonRow}>
           <Button
             label="암기"
-            variant="ghost"
+            variant="outline"
             disabled={memorizeCount === 0}
             onPress={() => router.push(`/deck/${deckId}/study?mode=memorize&${studyParams}`)}
             style={styles.flexButton}
           />
           <Button
             label="복습"
-            variant="ghost"
+            variant="outline"
             disabled={reviewCount === 0}
             onPress={() => router.push(`/deck/${deckId}/study?mode=review&${studyParams}`)}
             style={styles.flexButton}
           />
           <Button
             label="리콜"
-            variant="ghost"
+            variant="outline"
             disabled={recallCount < 4}
             onPress={() =>
               router.push(
@@ -168,30 +181,37 @@ export default function DeckDetailScreen() {
             style={styles.flexButton}
           />
         </View>
+
         {recallCount < 4 ? (
-          <ThemedText type="small" themeColor="placeholder">
-            리콜 테스트는 단어가 4개 이상일 때 시작할 수 있습니다.
-          </ThemedText>
+          <View style={styles.recallHint}>
+            <Image
+              source={require('../../../../assets/illustrations/empty-flashcards.png')}
+              style={styles.recallHintArt}
+              resizeMode="contain"
+            />
+            <ThemedText type="caption" themeColor="textTertiary" style={styles.recallHintText}>
+              리콜 테스트는 단어가 4개 이상일 때 시작할 수 있습니다.
+            </ThemedText>
+          </View>
         ) : null}
-      </Card>
-
-      <WordRegisterForm deckId={deckId} knownTags={knownTags} />
-
-      <View style={styles.searchRow}>
-        <Ionicons name="search" size={16} color={theme.textSecondary} />
-        <TextField
-          value={query}
-          onChangeText={(v) => {
-            setQuery(v);
-            setPage(0);
-          }}
-          placeholder="단어 검색"
-          autoCapitalize="none"
-          style={styles.searchInput}
-        />
       </View>
 
-      <View style={styles.filterRow}>
+      <View style={styles.section}>
+        <WordRegisterForm deckId={deckId} knownTags={knownTags} />
+      </View>
+
+      <TextField
+        emphasis="secondary"
+        value={query}
+        onChangeText={(v) => {
+          setQuery(v);
+          setPage(0);
+        }}
+        placeholder="단어 검색"
+        autoCapitalize="none"
+      />
+
+      <View style={[styles.filterRow, styles.filterRowFirst]}>
         <Chip
           label="즐겨찾기만"
           selected={favoritesOnly}
@@ -228,11 +248,12 @@ export default function DeckDetailScreen() {
           label={`선택한 ${selectedIds.length}개 삭제`}
           variant="danger"
           onPress={deleteSelected}
+          style={styles.deleteSelected}
         />
       ) : null}
 
       {pageItems.length === 0 ? (
-        <ThemedText type="small" themeColor="textSecondary">
+        <ThemedText type="body" themeColor="textSecondary" style={styles.emptyList}>
           {words.length === 0 ? '아직 등록된 단어가 없습니다.' : '조건에 맞는 단어가 없습니다.'}
         </ThemedText>
       ) : (
@@ -256,19 +277,25 @@ export default function DeckDetailScreen() {
 
       {totalPages > 1 ? (
         <View style={styles.pagination}>
-          <IconButton
-            name="chevron-back-outline"
-            onPress={() => setPage((p) => Math.max(0, p - 1))}
-            color={currentPage === 0 ? 'placeholder' : 'text'}
-          />
-          <ThemedText type="small">
+          <Pressable onPress={() => setPage((p) => Math.max(0, p - 1))} hitSlop={10}>
+            <ThemedText
+              type="metaSemi"
+              style={{ color: currentPage === 0 ? theme.textTertiary : theme.ink }}>
+              ‹
+            </ThemedText>
+          </Pressable>
+          <ThemedText type="metaSemi">
             {currentPage + 1} / {totalPages}
           </ThemedText>
-          <IconButton
-            name="chevron-forward-outline"
+          <Pressable
             onPress={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-            color={currentPage === totalPages - 1 ? 'placeholder' : 'text'}
-          />
+            hitSlop={10}>
+            <ThemedText
+              type="metaSemi"
+              style={{ color: currentPage === totalPages - 1 ? theme.textTertiary : theme.ink }}>
+              ›
+            </ThemedText>
+          </Pressable>
         </View>
       ) : null}
     </Screen>
@@ -280,21 +307,55 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 8,
+    gap: 12,
+    borderBottomWidth: Border.strong,
+    borderBottomColor: theme.ink,
+    paddingBottom: 24,
+    marginBottom: 24,
   },
   title: {
     flex: 1,
-    fontSize: 18,
-    lineHeight: 24,
     textAlign: 'center',
+  },
+  headerSpacer: {
+    width: 24,
+  },
+  headerAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  headerIcon: {
+    width: 14,
+    height: 14,
+  },
+  headerActionLabel: {
+    fontSize: 12,
+    letterSpacing: 0.6,
+  },
+  backButton: {
+    marginTop: 16,
+  },
+
+  studyBlock: {
+    borderWidth: Border.strong,
+    borderColor: theme.ink,
+    borderRadius: 0,
+    padding: 20,
+    gap: 12,
   },
   countsRow: {
     flexDirection: 'row',
     gap: 16,
   },
-  optionRow: {
+  countText: {
+    fontSize: 12,
+  },
+  chipJoinRow: {
     flexDirection: 'row',
-    gap: 8,
+  },
+  chipJoined: {
+    marginLeft: -1,
   },
   buttonRow: {
     flexDirection: 'row',
@@ -303,23 +364,48 @@ const styles = StyleSheet.create({
   flexButton: {
     flex: 1,
   },
-  searchRow: {
+  recallHint: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
-  searchInput: {
+  recallHintArt: {
+    width: 44,
+    height: 44,
+    opacity: 0.85,
+  },
+  recallHintText: {
     flex: 1,
   },
+
+  section: {
+    borderBottomWidth: Border.hair,
+    borderBottomColor: theme.line,
+    paddingBottom: 24,
+    marginBottom: 24,
+    paddingTop: 24,
+  },
+
   filterRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
+    marginTop: 12,
   },
+  filterRowFirst: {
+    marginTop: 16,
+  },
+  deleteSelected: {
+    marginTop: 16,
+  },
+  emptyList: {
+    marginTop: 24,
+  },
+
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    columnGap: 20,
   },
   gridItem: {
     flexBasis: '48%',
@@ -329,6 +415,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
+    gap: 16,
+    paddingTop: 24,
   },
 });

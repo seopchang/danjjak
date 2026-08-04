@@ -16,8 +16,15 @@ export const REVIEW_MINUTE = 0;
 const DAILY_REVIEW_ID = 'daily-review';
 const ANDROID_CHANNEL_ID = 'daily-review';
 
+/**
+ * 로컬 알림은 네이티브 모듈이라 웹에서는 호출 자체가 던진다.
+ * 디자인 확인용 웹 미리보기가 죽지 않도록 웹에서는 전부 무동작으로 둔다.
+ */
+const SUPPORTED = Platform.OS !== 'web';
+
 /** 앱이 떠 있는 동안 알림이 와도 배너를 띄운다. */
 export function configureNotificationHandler(): void {
+  if (!SUPPORTED) return;
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
       shouldPlaySound: false,
@@ -33,6 +40,7 @@ export function configureNotificationHandler(): void {
  * 이미 거절한 사용자에게 다시 묻지는 않는다(시스템이 무시한다).
  */
 export async function ensureNotificationPermission(): Promise<boolean> {
+  if (!SUPPORTED) return false;
   const current = await Notifications.getPermissionsAsync();
   if (current.granted) return true;
   if (!current.canAskAgain) return false;
@@ -83,6 +91,7 @@ export async function scheduleDailyReviewReminder(): Promise<boolean> {
 }
 
 export async function cancelDailyReviewReminder(): Promise<void> {
+  if (!SUPPORTED) return;
   await Notifications.cancelScheduledNotificationAsync(DAILY_REVIEW_ID).catch(() => {
     // 예약된 적이 없으면 그냥 넘어간다.
   });
@@ -90,6 +99,7 @@ export async function cancelDailyReviewReminder(): Promise<void> {
 
 /** 설정 화면에서 현재 예약 상태를 보여주기 위해 쓴다. */
 export async function isDailyReviewScheduled(): Promise<boolean> {
+  if (!SUPPORTED) return false;
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
   return scheduled.some((n) => n.identifier === DAILY_REVIEW_ID);
 }

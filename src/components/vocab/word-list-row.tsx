@@ -1,15 +1,15 @@
+import { Ionicons } from '@expo/vector-icons';
 import dayjs from 'dayjs';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Card } from '@/components/common/card';
 import { Checkbox } from '@/components/common/checkbox';
-import { Chip } from '@/components/common/chip';
-import { IconButton } from '@/components/common/icon-button';
 import { TextField } from '@/components/common/text-field';
 import { ThemedText } from '@/components/themed-text';
-import { useTheme } from '@/hooks/use-theme';
+import { Border, Colors, FontFamily } from '@/constants/theme';
 import { Word } from '@/types';
+
+const theme = Colors.light;
 
 interface WordListRowProps {
   index: number;
@@ -33,7 +33,6 @@ export function WordListRow({
   onUpdate,
   onRemove,
 }: WordListRowProps) {
-  const theme = useTheme();
   const [meaningRevealed, setMeaningRevealed] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({
@@ -43,6 +42,7 @@ export function WordListRow({
   });
 
   const revealed = revealAll || meaningRevealed;
+  const done = word.status === '암기완료';
 
   const commitEdit = () => {
     onUpdate({
@@ -64,40 +64,39 @@ export function WordListRow({
   };
 
   return (
-    <Card>
+    <View style={styles.row}>
       <View style={styles.topRow}>
         <Checkbox checked={checked} onPress={onToggleChecked} />
-        <ThemedText type="small" themeColor="textSecondary">
+        <ThemedText type="meta" themeColor="textSecondary">
           {index + 1}
         </ThemedText>
-        <View
-          style={[
-            styles.statusBadge,
-            {
-              backgroundColor:
-                word.status === '암기완료' ? theme.primary : theme.backgroundElement,
-            },
-          ]}>
+        <View style={[styles.statusBadge, { backgroundColor: done ? theme.ink : theme.surface }]}>
           <ThemedText
-            type="small"
-            style={{ color: word.status === '암기완료' ? theme.primaryText : theme.text }}>
+            type="labelKo"
+            style={[styles.statusText, { color: done ? theme.onInk : theme.ink }]}>
             {word.status}
           </ThemedText>
         </View>
+
         <View style={styles.spacer} />
-        <IconButton
-          name={word.isFavorite ? 'star' : 'star-outline'}
-          onPress={onToggleFavorite}
-          size={18}
-          color={word.isFavorite ? 'favorite' : 'textSecondary'}
-        />
-        <IconButton
-          name={editing ? 'checkmark' : 'pencil-outline'}
-          onPress={editing ? commitEdit : startEdit}
-          size={16}
-          color="textSecondary"
-        />
-        <IconButton name="trash-outline" onPress={onRemove} size={16} color="danger" />
+
+        <Pressable onPress={onToggleFavorite} hitSlop={8}>
+          <Ionicons
+            name={word.isFavorite ? 'star' : 'star-outline'}
+            size={18}
+            color={word.isFavorite ? theme.favorite : theme.textSecondary}
+          />
+        </Pressable>
+        <Pressable onPress={editing ? commitEdit : startEdit} hitSlop={8}>
+          <ThemedText type="caption" themeColor="textSecondary" style={styles.actionLink}>
+            {editing ? '완료' : '수정'}
+          </ThemedText>
+        </Pressable>
+        <Pressable onPress={onRemove} hitSlop={8}>
+          <ThemedText type="caption" themeColor="textSecondary" style={styles.actionLink}>
+            삭제
+          </ThemedText>
+        </Pressable>
       </View>
 
       {editing ? (
@@ -114,6 +113,7 @@ export function WordListRow({
             placeholder="뜻"
           />
           <TextField
+            emphasis="secondary"
             value={draft.tags}
             onChangeText={(tags) => setDraft((d) => ({ ...d, tags }))}
             placeholder="태그 (쉼표로 구분)"
@@ -122,11 +122,9 @@ export function WordListRow({
         </View>
       ) : (
         <>
-          <ThemedText type="smallBold" style={styles.term}>
-            {word.term}
-          </ThemedText>
+          <ThemedText style={styles.term}>{word.term}</ThemedText>
           <Pressable onPress={() => setMeaningRevealed((v) => !v)}>
-            <ThemedText type="small" themeColor={revealed ? 'text' : 'placeholder'}>
+            <ThemedText type="body" themeColor={revealed ? 'ink' : 'textTertiary'}>
               {revealed ? word.meaning : '뜻 가림 · 눌러서 표시'}
             </ThemedText>
           </Pressable>
@@ -136,15 +134,19 @@ export function WordListRow({
       {word.tags.length > 0 ? (
         <View style={styles.tagRow}>
           {word.tags.map((tag) => (
-            <Chip key={tag} label={tag} />
+            <View key={tag} style={styles.tag}>
+              <ThemedText type="labelKo" themeColor="textSecondary" style={styles.tagText}>
+                {tag}
+              </ThemedText>
+            </View>
           ))}
         </View>
       ) : null}
 
-      <ThemedText type="small" themeColor="textSecondary">
+      <ThemedText type="caption" themeColor="textSecondary" style={styles.registered}>
         등록일 {dayjs(word.registeredAt).format('YYYY.MM.DD')}
       </ThemedText>
-    </Card>
+    </View>
   );
 }
 
@@ -158,6 +160,12 @@ export function parseTags(raw: string): string[] {
 }
 
 const styles = StyleSheet.create({
+  row: {
+    paddingVertical: 16,
+    borderBottomWidth: Border.hair,
+    borderBottomColor: theme.line,
+    gap: 8,
+  },
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -167,13 +175,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statusBadge: {
-    borderRadius: 999,
+    borderRadius: 0,
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
+  statusText: {
+    fontSize: 10,
+    letterSpacing: 0.5,
+  },
+  actionLink: {
+    textDecorationLine: 'underline',
+  },
   term: {
+    fontFamily: FontFamily.displayBold,
     fontSize: 18,
-    lineHeight: 24,
+    color: theme.ink,
   },
   editArea: {
     gap: 8,
@@ -182,5 +198,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
+  },
+  tag: {
+    borderWidth: Border.hair,
+    borderColor: theme.line,
+    borderRadius: 0,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  tagText: {
+    fontSize: 11,
+    letterSpacing: 0.5,
+  },
+  registered: {
+    fontSize: 11,
   },
 });

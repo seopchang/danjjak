@@ -1,14 +1,12 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/common/button';
-import { Card } from '@/components/common/card';
 import { Chip } from '@/components/common/chip';
-import { IconButton } from '@/components/common/icon-button';
 import { Screen } from '@/components/common/screen';
 import { ThemedText } from '@/components/themed-text';
-import { useTheme } from '@/hooks/use-theme';
+import { Border, Colors } from '@/constants/theme';
 import { useSessionsStore } from '@/stores/sessions-store';
 import { deckWords, useWordsStore } from '@/stores/words-store';
 import { RecallDirection, Word } from '@/types';
@@ -17,6 +15,7 @@ import { shuffled } from '@/utils/shuffle';
 const CHOICE_COUNT = 4;
 /** 정답을 보여주고 다음 문제로 넘어가기까지의 시간(ms) */
 const NEXT_DELAY = 650;
+const theme = Colors.light;
 
 interface RecallQuestion {
   wordId: string;
@@ -56,7 +55,6 @@ export default function RecallModeScreen() {
     deckId: string;
     favorites?: string;
   }>();
-  const theme = useTheme();
   const allWords = useWordsStore((s) => s.words);
   const markStatus = useWordsStore((s) => s.markStatus);
   const addSession = useSessionsStore((s) => s.addSession);
@@ -133,66 +131,80 @@ export default function RecallModeScreen() {
     }, NEXT_DELAY);
   };
 
+  const Header = () => (
+    <View style={styles.header}>
+      <Pressable onPress={() => router.back()} hitSlop={10}>
+        <ThemedText type="screenTitle">←</ThemedText>
+      </Pressable>
+      <ThemedText type="screenTitle">리콜 테스트</ThemedText>
+      <View style={styles.headerSpacer} />
+    </View>
+  );
+
   if (questions.length === 0 || finished || !current) {
+    const notEnough = questions.length === 0;
     const accuracy =
       correctCount + incorrectCount > 0
         ? Math.round((correctCount / (correctCount + incorrectCount)) * 100)
         : 0;
     return (
       <Screen>
-        <View style={styles.header}>
-          <IconButton name="chevron-back" onPress={() => router.back()} size={24} />
-          <ThemedText type="smallBold">리콜 테스트</ThemedText>
-          <View style={{ width: 24 }} />
-        </View>
-        <Card>
-          <ThemedText type="smallBold">
-            {questions.length === 0
+        <Header />
+        <View style={styles.summary}>
+          {!notEnough ? (
+            <Image
+              source={require('../../../../assets/illustrations/complete-badge.png')}
+              style={styles.summaryArt}
+              resizeMode="contain"
+            />
+          ) : null}
+          <ThemedText type="sectionHeading" style={styles.summaryTitle}>
+            {notEnough
               ? '리콜 테스트를 만들 단어가 부족합니다. (4개 이상 필요)'
               : '리콜 테스트를 완료했습니다.'}
           </ThemedText>
           {finished ? (
-            <ThemedText type="small" themeColor="textSecondary">
+            <ThemedText type="body" themeColor="textSecondary" style={styles.summaryResult}>
               정답 {correctCount}개 · 오답 {incorrectCount}개 · 정답률 {accuracy}%
             </ThemedText>
           ) : null}
-          {questions.length > 0 ? (
-            <Button label="다시 풀기" variant="ghost" onPress={restart} />
+          {!notEnough ? (
+            <Button label="다시 풀기" variant="outline" onPress={restart} />
           ) : null}
           <Button label="모드 종료" onPress={() => router.back()} />
-        </Card>
+        </View>
       </Screen>
     );
   }
 
   return (
     <Screen>
-      <View style={styles.header}>
-        <IconButton name="chevron-back" onPress={() => router.back()} size={24} />
-        <ThemedText type="smallBold">리콜 테스트</ThemedText>
-        <View style={{ width: 24 }} />
-      </View>
+      <Header />
 
-      <Card style={{ backgroundColor: theme.backgroundElement }}>
-        <ThemedText type="small">
+      <View style={styles.guide}>
+        <ThemedText type="caption">
           {direction === 'meaningToTerm'
             ? '뜻을 보고 알맞은 단어를 고르세요.'
             : '단어를 보고 알맞은 뜻을 고르세요.'}{' '}
           정답이면 암기완료, 오답이면 미암기로 처리됩니다.
         </ThemedText>
-        <ThemedText type="small" themeColor="textSecondary">
-          진행률 {index + 1}/{questions.length}
+        <ThemedText type="metaSemi" themeColor="textSecondary">
+          {index + 1}/{questions.length}
         </ThemedText>
-        <View style={styles.directionRow}>
-          <Chip
-            label="뜻 → 단어"
-            selected={direction === 'meaningToTerm'}
-            onPress={() => {
-              if (direction === 'meaningToTerm') return;
-              setDirection('meaningToTerm');
-              restart();
-            }}
-          />
+      </View>
+
+      {/* 방향 선택 칩은 서로 붙여 배치한다 */}
+      <View style={styles.directionRow}>
+        <Chip
+          label="뜻 → 단어"
+          selected={direction === 'meaningToTerm'}
+          onPress={() => {
+            if (direction === 'meaningToTerm') return;
+            setDirection('meaningToTerm');
+            restart();
+          }}
+        />
+        <View style={styles.chipJoined}>
           <Chip
             label="단어 → 뜻"
             selected={direction === 'termToMeaning'}
@@ -203,16 +215,16 @@ export default function RecallModeScreen() {
             }}
           />
         </View>
-      </Card>
+      </View>
 
-      <Card style={styles.questionCard}>
-        <ThemedText type="small" themeColor="textSecondary">
+      <View style={styles.questionBox}>
+        <ThemedText type="labelKo" themeColor="textSecondary" style={styles.questionLabel}>
           {direction === 'meaningToTerm' ? '다음 뜻에 해당하는 단어는?' : '다음 단어의 뜻은?'}
         </ThemedText>
-        <ThemedText type="default" style={styles.prompt}>
+        <ThemedText type="question" style={styles.prompt}>
           {current.prompt}
         </ThemedText>
-      </Card>
+      </View>
 
       <View style={styles.choices}>
         {current.choices.map((choice) => {
@@ -224,13 +236,10 @@ export default function RecallModeScreen() {
               onPress={() => pick(choice)}
               style={[
                 styles.choice,
-                { borderColor: theme.border, backgroundColor: theme.card },
-                isAnswer && { backgroundColor: theme.primary, borderColor: theme.primary },
-                isWrongPick && { backgroundColor: theme.backgroundSelected },
+                isAnswer && { backgroundColor: theme.ink, borderColor: theme.ink },
+                isWrongPick && { backgroundColor: theme.selected, borderColor: theme.line },
               ]}>
-              <ThemedText
-                type="default"
-                style={isAnswer ? { color: theme.primaryText } : undefined}>
+              <ThemedText type="body" style={isAnswer ? { color: theme.onInk } : undefined}>
                 {choice}
               </ThemedText>
             </Pressable>
@@ -252,29 +261,78 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    borderBottomWidth: Border.strong,
+    borderBottomColor: theme.ink,
+    paddingBottom: 24,
+    marginBottom: 24,
   },
+  headerSpacer: {
+    width: 24,
+  },
+
+  guide: {
+    borderLeftWidth: Border.strong,
+    borderLeftColor: theme.ink,
+    paddingLeft: 14,
+    paddingVertical: 4,
+    gap: 6,
+    marginBottom: 24,
+  },
+
   directionRow: {
     flexDirection: 'row',
-    gap: 8,
+    marginBottom: 24,
   },
-  questionCard: {
+  chipJoined: {
+    marginLeft: -1,
+  },
+
+  questionBox: {
+    borderWidth: Border.strong,
+    borderColor: theme.ink,
+    borderRadius: 0,
+    paddingVertical: 36,
+    paddingHorizontal: 20,
     alignItems: 'center',
-    paddingVertical: 28,
-    gap: 8,
+    gap: 12,
+  },
+  questionLabel: {
+    fontSize: 11,
+    letterSpacing: 0.5,
+    textAlign: 'center',
   },
   prompt: {
     textAlign: 'center',
-    fontSize: 20,
-    lineHeight: 28,
   },
+
   choices: {
     gap: 8,
+    marginTop: 24,
+    marginBottom: 8,
   },
   choice: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingVertical: 14,
+    borderWidth: Border.hair,
+    borderColor: theme.ink,
+    borderRadius: 0,
+    backgroundColor: theme.background,
+    paddingVertical: 15,
     paddingHorizontal: 16,
     alignItems: 'center',
+  },
+
+  summary: {
+    gap: 14,
+    paddingVertical: 12,
+  },
+  summaryArt: {
+    width: 88,
+    height: 88,
+    alignSelf: 'center',
+  },
+  summaryTitle: {
+    textAlign: 'center',
+  },
+  summaryResult: {
+    textAlign: 'center',
   },
 });

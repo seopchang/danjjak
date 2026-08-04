@@ -1,16 +1,16 @@
 import dayjs from 'dayjs';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Card } from '@/components/common/card';
-import { IconButton } from '@/components/common/icon-button';
 import { Screen } from '@/components/common/screen';
 import { ThemedText } from '@/components/themed-text';
-import { useTheme } from '@/hooks/use-theme';
+import { Border, Colors } from '@/constants/theme';
 import { useDecksStore } from '@/stores/decks-store';
 import { deckSessions, useSessionsStore } from '@/stores/sessions-store';
 import { deckWords, useWordsStore } from '@/stores/words-store';
+
+const theme = Colors.light;
 
 function formatDuration(seconds: number): string {
   if (seconds < 60) return `${seconds}초`;
@@ -21,7 +21,6 @@ function formatDuration(seconds: number): string {
 
 export default function StatsScreen() {
   const { deckId } = useLocalSearchParams<{ deckId: string }>();
-  const theme = useTheme();
   const decks = useDecksStore((s) => s.decks);
   const allWords = useWordsStore((s) => s.words);
   const allSessions = useSessionsStore((s) => s.sessions);
@@ -46,34 +45,33 @@ export default function StatsScreen() {
   return (
     <Screen>
       <View style={styles.header}>
-        <IconButton name="chevron-back" onPress={() => router.back()} size={24} />
-        <ThemedText type="smallBold" style={styles.title} numberOfLines={1}>
+        <Pressable onPress={() => router.back()} hitSlop={10}>
+          <ThemedText type="screenTitle">←</ThemedText>
+        </Pressable>
+        <ThemedText type="screenTitle" style={styles.title} numberOfLines={1}>
           {deck?.name ?? '단어장'} 통계
         </ThemedText>
-        <View style={{ width: 24 }} />
+        <View style={styles.headerSpacer} />
       </View>
 
-      <Card>
-        <View style={styles.badgeRow}>
-          {badges.map((b) => (
-            <View
-              key={b.label}
-              style={[styles.badge, { backgroundColor: theme.backgroundElement }]}>
-              <ThemedText type="small" themeColor="textSecondary">
-                {b.label}
-              </ThemedText>
-              <ThemedText type="smallBold" style={styles.badgeValue}>
-                {b.value}
-              </ThemedText>
-            </View>
-          ))}
-        </View>
-      </Card>
+      {/* 요약 4분할 — 카드 없이 세로선으로만 나눈다 */}
+      <View style={styles.badgeRow}>
+        {badges.map((b, i) => (
+          <View key={b.label} style={[styles.badge, i > 0 && styles.badgeDivider]}>
+            <ThemedText type="statValue">{b.value}</ThemedText>
+            <ThemedText type="labelKo" themeColor="textSecondary" style={styles.badgeLabel}>
+              {b.label}
+            </ThemedText>
+          </View>
+        ))}
+      </View>
 
-      <ThemedText type="smallBold">학습 기록</ThemedText>
+      <ThemedText type="sectionHeading" style={styles.sectionHeading}>
+        학습 기록
+      </ThemedText>
 
       {sessions.length === 0 ? (
-        <ThemedText type="small" themeColor="textSecondary">
+        <ThemedText type="body" themeColor="textSecondary">
           아직 학습 기록이 없습니다. 암기·복습·리콜을 한 번 진행하면 여기에 쌓입니다.
         </ThemedText>
       ) : (
@@ -81,25 +79,26 @@ export default function StatsScreen() {
           const expanded = expandedId === session.id;
           const tested = words.filter((w) => session.testedWordIds.includes(w.id));
           return (
-            <Card key={session.id}>
+            <View key={session.id} style={styles.sessionRow}>
               <View style={styles.sessionHead}>
-                <View style={[styles.typeBadge, { backgroundColor: theme.primary }]}>
-                  <ThemedText type="small" style={{ color: theme.primaryText }}>
+                <View style={styles.typeBadge}>
+                  <ThemedText type="labelKo" style={styles.typeBadgeText}>
                     {session.type}
                   </ThemedText>
                 </View>
-                <ThemedText type="small" themeColor="textSecondary" style={styles.grow}>
+                <ThemedText type="meta" themeColor="textSecondary" style={styles.grow}>
                   {dayjs(session.date).format('YYYY.MM.DD HH:mm')}
                 </ThemedText>
-                <IconButton
-                  name={expanded ? 'chevron-up' : 'chevron-down'}
+                <Pressable
                   onPress={() => setExpandedId(expanded ? null : session.id)}
-                  size={18}
-                  color="textSecondary"
-                />
+                  hitSlop={10}>
+                  <ThemedText type="meta" themeColor="textSecondary">
+                    {expanded ? '▲' : '▼'}
+                  </ThemedText>
+                </Pressable>
               </View>
 
-              <ThemedText type="small" themeColor="textSecondary">
+              <ThemedText type="caption" themeColor="textSecondary" style={styles.sessionMeta}>
                 {session.testedWordIds.length}개 테스트 · 정답 {session.correctCount} · 오답{' '}
                 {session.incorrectCount} · 정답률 {session.accuracy}% ·{' '}
                 {formatDuration(session.durationSeconds)}
@@ -109,18 +108,18 @@ export default function StatsScreen() {
                 tested.length > 0 ? (
                   <View style={styles.testedList}>
                     {tested.map((w) => (
-                      <ThemedText key={w.id} type="small" themeColor="textSecondary">
+                      <ThemedText key={w.id} type="caption" themeColor="textSecondary">
                         · {w.term} — {w.meaning}
                       </ThemedText>
                     ))}
                   </View>
                 ) : (
-                  <ThemedText type="small" themeColor="placeholder">
+                  <ThemedText type="caption" themeColor="textTertiary">
                     테스트한 단어가 삭제되었습니다.
                   </ThemedText>
                 )
               ) : null}
-            </Card>
+            </View>
           );
         })
       )}
@@ -133,29 +132,50 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 8,
+    gap: 12,
+    borderBottomWidth: Border.strong,
+    borderBottomColor: theme.ink,
+    paddingBottom: 24,
+    marginBottom: 24,
   },
   title: {
     flex: 1,
     textAlign: 'center',
   },
+  headerSpacer: {
+    width: 24,
+  },
+
   badgeRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+    paddingVertical: 20,
+    borderBottomWidth: Border.hair,
+    borderBottomColor: theme.line,
   },
   badge: {
-    flexGrow: 1,
-    flexBasis: '22%',
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    flex: 1,
     alignItems: 'center',
-    gap: 2,
+    gap: 4,
   },
-  badgeValue: {
-    fontSize: 18,
-    lineHeight: 24,
+  badgeDivider: {
+    borderLeftWidth: Border.hair,
+    borderLeftColor: theme.line,
+  },
+  badgeLabel: {
+    fontSize: 11,
+    letterSpacing: 0.5,
+  },
+
+  sectionHeading: {
+    paddingTop: 24,
+    paddingBottom: 4,
+  },
+
+  sessionRow: {
+    paddingVertical: 16,
+    borderBottomWidth: Border.hair,
+    borderBottomColor: theme.line,
+    gap: 8,
   },
   sessionHead: {
     flexDirection: 'row',
@@ -166,9 +186,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   typeBadge: {
-    borderRadius: 999,
-    paddingHorizontal: 10,
+    backgroundColor: theme.ink,
+    borderRadius: 0,
+    paddingHorizontal: 8,
     paddingVertical: 2,
+  },
+  typeBadgeText: {
+    color: theme.onInk,
+    fontSize: 10,
+    letterSpacing: 0.5,
+  },
+  sessionMeta: {
+    fontSize: 12,
   },
   testedList: {
     gap: 2,

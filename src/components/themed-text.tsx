@@ -1,73 +1,62 @@
-import { Platform, StyleSheet, Text, type TextProps } from 'react-native';
+import { StyleSheet, Text, type TextProps } from 'react-native';
 
-import { Fonts, ThemeColor } from '@/constants/theme';
+import { Type, ThemeColor } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
+/**
+ * 디자인 스펙 1.3 타이포 스케일의 역할 이름을 그대로 쓴다.
+ * 한글이 섞일 수 있는 역할은 Pretendard, 라틴/숫자 전용 역할만
+ * Space Grotesk / JetBrains Mono 로 간다.
+ */
+export type TextRole =
+  | 'appTitle'
+  | 'screenTitle'
+  | 'sectionHeading'
+  | 'rowTitle'
+  | 'term'
+  | 'question'
+  | 'bigNumber'
+  | 'statValue'
+  | 'labelLatin'
+  | 'labelKo'
+  | 'meta'
+  | 'metaSemi'
+  | 'button'
+  | 'body'
+  | 'bodyBold'
+  | 'caption';
+
 export type ThemedTextProps = TextProps & {
-  type?: 'default' | 'title' | 'small' | 'smallBold' | 'subtitle' | 'link' | 'linkPrimary' | 'code';
+  type?: TextRole;
   themeColor?: ThemeColor;
 };
 
-export function ThemedText({ style, type = 'default', themeColor, ...rest }: ThemedTextProps) {
+export function ThemedText({ style, type = 'body', themeColor, ...rest }: ThemedTextProps) {
   const theme = useTheme();
 
   return (
     <Text
-      style={[
-        { color: theme[themeColor ?? 'text'] },
-        type === 'default' && styles.default,
-        type === 'title' && styles.title,
-        type === 'small' && styles.small,
-        type === 'smallBold' && styles.smallBold,
-        type === 'subtitle' && styles.subtitle,
-        type === 'link' && styles.link,
-        type === 'linkPrimary' && styles.linkPrimary,
-        type === 'code' && styles.code,
-        style,
-      ]}
+      style={[{ color: theme[themeColor ?? 'text'] }, styles[type], style]}
       {...rest}
     />
   );
 }
 
 const styles = StyleSheet.create({
-  small: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: 500,
-  },
-  smallBold: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: 700,
-  },
-  default: {
-    fontSize: 16,
-    lineHeight: 24,
-    fontWeight: 500,
-  },
-  title: {
-    fontSize: 48,
-    fontWeight: 600,
-    lineHeight: 52,
-  },
-  subtitle: {
-    fontSize: 32,
-    lineHeight: 44,
-    fontWeight: 600,
-  },
-  link: {
-    lineHeight: 30,
-    fontSize: 14,
-  },
-  linkPrimary: {
-    lineHeight: 30,
-    fontSize: 14,
-    color: '#3c87f7',
-  },
-  code: {
-    fontFamily: Fonts.mono,
-    fontWeight: Platform.select({ android: 700 }) ?? 500,
-    fontSize: 12,
-  },
+  appTitle: Type.appTitle,
+  screenTitle: Type.screenTitle,
+  sectionHeading: Type.sectionHeading,
+  rowTitle: Type.rowTitle,
+  term: Type.term,
+  question: { ...Type.question, lineHeight: 30 },
+  bigNumber: Type.bigNumber,
+  statValue: Type.statValue,
+  labelLatin: Type.labelLatin,
+  labelKo: Type.labelKo,
+  meta: Type.meta,
+  metaSemi: Type.metaSemi,
+  button: Type.button,
+  body: { ...Type.body, lineHeight: 20 },
+  bodyBold: { ...Type.bodyBold, lineHeight: 20 },
+  caption: { ...Type.caption, lineHeight: 19 },
 });

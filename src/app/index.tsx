@@ -1,23 +1,20 @@
-import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Image, Pressable, StyleSheet, View } from 'react-native';
 
-import { Button } from '@/components/common/button';
-import { Card } from '@/components/common/card';
-import { IconButton } from '@/components/common/icon-button';
 import { Screen } from '@/components/common/screen';
 import { TextField } from '@/components/common/text-field';
 import { SyncBar } from '@/components/sync-bar';
 import { ThemedText } from '@/components/themed-text';
-import { useTheme } from '@/hooks/use-theme';
+import { Border, Colors } from '@/constants/theme';
 import { useDecksStore, visibleDecks } from '@/stores/decks-store';
 import { useSessionsStore } from '@/stores/sessions-store';
 import { deckWords, useWordsStore } from '@/stores/words-store';
 import { buildDailyReviewQueue } from '@/utils/review-queue';
 
+const theme = Colors.light;
+
 export default function DeckListScreen() {
-  const theme = useTheme();
   const decks = useDecksStore((s) => s.decks);
   const addDeck = useDecksStore((s) => s.addDeck);
   const removeDeck = useDecksStore((s) => s.removeDeck);
@@ -75,144 +72,171 @@ export default function DeckListScreen() {
     ]);
   };
 
+  const hasReview = summary.reviewCount > 0;
+
   return (
     <Screen>
       <View style={styles.header}>
-        <ThemedText type="subtitle">보카덱</ThemedText>
-        <IconButton name="settings-outline" onPress={() => router.push('/settings')} size={24} />
+        <View style={styles.brand}>
+          <View style={styles.brandMark} />
+          <ThemedText type="appTitle">보카덱</ThemedText>
+        </View>
+        <Pressable style={styles.headerAction} onPress={() => router.push('/settings')}>
+          <Image
+            source={require('../../assets/illustrations/icon-settings.png')}
+            style={styles.headerIcon}
+            resizeMode="contain"
+          />
+          <ThemedText type="labelKo" themeColor="textSecondary" style={styles.headerActionLabel}>
+            설정
+          </ThemedText>
+        </Pressable>
       </View>
 
       <SyncBar />
 
       {/* 오늘 복습할 거리를 가장 먼저 보여준다 — 앱을 여는 주된 이유이기 때문. */}
-      <Pressable onPress={() => router.push('/review')} disabled={summary.reviewCount === 0}>
-        <Card
-          style={{
-            backgroundColor: summary.reviewCount > 0 ? theme.primary : theme.card,
-            borderColor: summary.reviewCount > 0 ? theme.primary : theme.border,
-          }}>
+      <Pressable onPress={() => router.push('/review')} disabled={!hasReview}>
+        <View style={[styles.reviewCard, hasReview && { backgroundColor: theme.ink }]}>
           <View style={styles.reviewHead}>
             <ThemedText
-              type="smallBold"
-              style={summary.reviewCount > 0 ? { color: theme.primaryText } : undefined}>
+              type="labelKo"
+              style={{ color: hasReview ? theme.onInk : theme.ink }}>
               오늘의 복습
             </ThemedText>
-            {summary.reviewCount > 0 ? (
-              <Ionicons name="arrow-forward" size={18} color={theme.primaryText} />
+            {hasReview ? (
+              <ThemedText type="labelKo" style={{ color: theme.onInk }}>
+                →
+              </ThemedText>
             ) : null}
           </View>
-          {summary.reviewCount > 0 ? (
-            <ThemedText type="title" style={[styles.reviewCount, { color: theme.primaryText }]}>
-              {summary.reviewCount}개
-            </ThemedText>
-          ) : (
-            <ThemedText type="small" themeColor="textSecondary">
-              단어를 등록하면 복습할 목록이 만들어집니다.
-            </ThemedText>
-          )}
-          {summary.reviewCount > 0 ? (
-            <ThemedText type="small" style={{ color: theme.primaryText, opacity: 0.75 }}>
-              미암기 단어부터 순서대로 모았습니다. 눌러서 시작하세요.
-            </ThemedText>
+
+          {hasReview ? (
+            <View style={styles.reviewCountRow}>
+              <ThemedText type="bigNumber" style={{ color: theme.onInk }}>
+                {summary.reviewCount}
+              </ThemedText>
+              <ThemedText type="sectionHeading" style={[styles.reviewUnit, { color: theme.onInk }]}>
+                개
+              </ThemedText>
+            </View>
           ) : null}
-        </Card>
+
+          <ThemedText
+            type="caption"
+            style={
+              hasReview ? { color: theme.onInk, opacity: 0.75 } : { color: theme.textSecondary }
+            }>
+            {hasReview
+              ? '미암기 단어부터 순서대로 모았어요.'
+              : '단어를 등록하면 목록이 채워집니다.'}
+          </ThemedText>
+        </View>
       </Pressable>
 
       {/* 전체 진행 상황 요약 */}
       <View style={styles.statRow}>
-        <StatTile label="전체 단어" value={summary.total} />
+        <StatTile label="전체" value={summary.total} first />
         <StatTile label="암기완료" value={summary.done} />
         <StatTile label="미암기" value={summary.todo} />
       </View>
 
       <View style={styles.listHead}>
-        <ThemedText type="smallBold">내 단어장 {list.length > 0 ? `(${list.length})` : ''}</ThemedText>
-        <IconButton
-          name={adding ? 'close' : 'add'}
+        <ThemedText type="sectionHeading" style={styles.listHeadTitle}>
+          내 단어장 {list.length > 0 ? `(${list.length})` : ''}
+        </ThemedText>
+        <Pressable
+          style={styles.addToggle}
           onPress={() => {
             setAdding((v) => !v);
             setNewName('');
-          }}
-          size={22}
-        />
+          }}>
+          <ThemedText style={styles.addToggleGlyph}>{adding ? '×' : '+'}</ThemedText>
+        </Pressable>
       </View>
 
       {adding ? (
-        <Card>
-          <View style={styles.addRow}>
-            <TextField
-              placeholder="예: 토익 필수, 수능 영단어"
-              value={newName}
-              onChangeText={setNewName}
-              onSubmitEditing={handleAdd}
-              returnKeyType="done"
-              autoFocus
-              style={styles.addInput}
-            />
-            <Button label="추가" onPress={handleAdd} disabled={!newName.trim()} />
-          </View>
-        </Card>
+        <View style={styles.addBox}>
+          <TextField
+            placeholder="예: 토익 필수, 수능 영단어"
+            value={newName}
+            onChangeText={setNewName}
+            onSubmitEditing={handleAdd}
+            returnKeyType="done"
+            autoFocus
+            style={styles.addInput}
+          />
+          <Pressable
+            onPress={handleAdd}
+            disabled={!newName.trim()}
+            style={[styles.addSubmit, !newName.trim() && styles.disabled]}>
+            <ThemedText type="button" style={{ color: theme.onInk }}>
+              추가
+            </ThemedText>
+          </Pressable>
+        </View>
       ) : null}
 
       {list.length === 0 ? (
-        <Card>
-          <ThemedText type="smallBold">아직 단어장이 없습니다.</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
+        <View style={styles.empty}>
+          <Image
+            source={require('../../assets/illustrations/empty-notebook.png')}
+            style={styles.emptyArt}
+            resizeMode="contain"
+          />
+          <ThemedText type="bodyBold">아직 단어장이 없습니다.</ThemedText>
+          <ThemedText type="body" themeColor="textSecondary" style={styles.emptyHint}>
             오른쪽 위 + 버튼으로 단어장을 하나 만들어 시작해보세요.
           </ThemedText>
-        </Card>
+        </View>
       ) : null}
 
-      {list.map(({ deck, total, done }) => (
-        <Pressable key={deck.id} onPress={() => router.push(`/deck/${deck.id}`)}>
-          <Card style={styles.deckCard}>
+      {list.map(({ deck, total, done }) => {
+        const percent = total > 0 ? Math.round((done / total) * 100) : 0;
+        return (
+          <Pressable
+            key={deck.id}
+            style={styles.deckRow}
+            onPress={() => router.push(`/deck/${deck.id}`)}>
             <View style={styles.deckHead}>
-              <ThemedText type="smallBold" style={styles.deckName} numberOfLines={1}>
+              <ThemedText type="rowTitle" style={styles.deckName} numberOfLines={1}>
                 {deck.name}
               </ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                {total > 0 ? `${Math.round((done / total) * 100)}%` : '0%'}
+              <ThemedText type="metaSemi" themeColor="textSecondary">
+                {percent}%
               </ThemedText>
-              <IconButton
-                name="trash-outline"
-                onPress={() => handleDelete(deck.id, deck.name)}
-                size={18}
-                color="textSecondary"
-              />
+              <Pressable onPress={() => handleDelete(deck.id, deck.name)} hitSlop={8}>
+                <ThemedText type="caption" themeColor="textSecondary" style={styles.deleteLink}>
+                  삭제
+                </ThemedText>
+              </Pressable>
             </View>
-            <View style={[styles.progressTrack, { backgroundColor: theme.backgroundElement }]}>
-              <View
-                style={[
-                  styles.progressFill,
-                  {
-                    backgroundColor: theme.primary,
-                    width: total > 0 ? `${Math.round((done / total) * 100)}%` : '0%',
-                  },
-                ]}
-              />
+
+            <View style={styles.progressTrack}>
+              <View style={[styles.progressFill, { width: `${percent}%` }]} />
             </View>
+
             <View style={styles.metaRow}>
-              <ThemedText type="small" themeColor="textSecondary">
+              <ThemedText type="caption" themeColor="textSecondary" style={styles.deckMeta}>
                 단어 {total} · 완료 {done} · 미암기 {total - done}
               </ThemedText>
-              <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+              <ThemedText type="meta" themeColor="textSecondary">
+                ›
+              </ThemedText>
             </View>
-          </Card>
-        </Pressable>
-      ))}
+          </Pressable>
+        );
+      })}
     </Screen>
   );
 }
 
-/** 숫자 하나를 크게 보여주는 작은 타일 */
-function StatTile({ label, value }: { label: string; value: number }) {
-  const theme = useTheme();
+/** 한 줄을 3등분하는 요약 칸. 카드가 아니라 세로선으로만 나눈다. */
+function StatTile({ label, value, first }: { label: string; value: number; first?: boolean }) {
   return (
-    <View style={[styles.statTile, { backgroundColor: theme.backgroundElement }]}>
-      <ThemedText type="smallBold" style={styles.statValue}>
-        {value}
-      </ThemedText>
-      <ThemedText type="small" themeColor="textSecondary">
+    <View style={[styles.statTile, !first && styles.statTileDivider]}>
+      <ThemedText type="statValue">{value}</ThemedText>
+      <ThemedText type="labelKo" themeColor="textSecondary" style={styles.statLabel}>
         {label}
       </ThemedText>
     </View>
@@ -224,70 +248,174 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    borderBottomWidth: Border.strong,
+    borderBottomColor: theme.ink,
+    paddingBottom: 24,
+    marginBottom: 24,
+  },
+  brand: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  brandMark: {
+    width: 10,
+    height: 10,
+    backgroundColor: theme.ink,
+  },
+  headerAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  headerIcon: {
+    width: 14,
+    height: 14,
+  },
+  headerActionLabel: {
+    fontSize: 12,
+    letterSpacing: 0.6,
+  },
+
+  reviewCard: {
+    borderWidth: Border.strong,
+    borderColor: theme.ink,
+    borderRadius: 0,
+    padding: 20,
+    gap: 10,
   },
   reviewHead: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  reviewCount: {
-    fontSize: 30,
-    lineHeight: 36,
+  reviewCountRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 6,
   },
+  reviewUnit: {
+    fontSize: 16,
+  },
+
   statRow: {
     flexDirection: 'row',
-    gap: 8,
+    paddingVertical: 20,
+    borderBottomWidth: Border.hair,
+    borderBottomColor: theme.line,
   },
   statTile: {
     flex: 1,
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    gap: 2,
     alignItems: 'center',
+    gap: 4,
   },
-  statValue: {
-    fontSize: 20,
-    lineHeight: 26,
+  statTileDivider: {
+    borderLeftWidth: Border.hair,
+    borderLeftColor: theme.line,
   },
+  statLabel: {
+    fontSize: 11,
+    letterSpacing: 0.5,
+  },
+
   listHead: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingTop: 24,
+    paddingBottom: 12,
   },
-  addRow: {
-    flexDirection: 'row',
+  listHeadTitle: {
+    fontSize: 18,
+  },
+  addToggle: {
+    width: 28,
+    height: 28,
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'center',
+    backgroundColor: theme.ink,
+    borderRadius: 0,
+  },
+  addToggleGlyph: {
+    color: theme.onInk,
+    fontSize: 18,
+    lineHeight: 22,
+  },
+
+  addBox: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    borderWidth: Border.strong,
+    borderColor: theme.ink,
+    borderRadius: 0,
+    marginBottom: 12,
   },
   addInput: {
     flex: 1,
+    borderBottomWidth: 0,
+    paddingHorizontal: 14,
   },
-  deckCard: {
-    gap: 8,
+  addSubmit: {
+    backgroundColor: theme.ink,
+    paddingHorizontal: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  disabled: {
+    opacity: 0.35,
+  },
+
+  empty: {
+    alignItems: 'center',
+    gap: 14,
+    borderTopWidth: Border.hair,
+    borderTopColor: theme.line,
+    paddingTop: 32,
+    paddingBottom: 24,
+  },
+  emptyArt: {
+    width: 140,
+    height: 140,
+    opacity: 0.85,
+  },
+  emptyHint: {
+    textAlign: 'center',
+  },
+
+  deckRow: {
+    paddingVertical: 18,
+    borderBottomWidth: Border.hair,
+    borderBottomColor: theme.line,
+    gap: 10,
   },
   deckHead: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
   deckName: {
     flex: 1,
-    fontSize: 17,
-    lineHeight: 23,
+  },
+  deleteLink: {
+    textDecorationLine: 'underline',
+  },
+  progressTrack: {
+    height: 4,
+    backgroundColor: theme.line,
+    borderRadius: 0,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: theme.ink,
+    borderRadius: 0,
   },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  progressTrack: {
-    height: 6,
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 3,
+  deckMeta: {
+    fontSize: 11,
   },
 });
