@@ -16,6 +16,12 @@ interface AuthState {
   uid: string | null;
   email: string | null;
   error: string | null;
+  /**
+   * 사용자에게 보여준 문구의 원본 Firebase 코드.
+   * 릴리스 APK 에서는 콘솔 로그를 볼 수 없어서, 화면에 작게 같이 띄워
+   * 폰에서도 원인을 읽을 수 있게 한다.
+   */
+  errorCode: string | null;
   busy: boolean;
   init: () => void;
   signIn: (email: string, password: string) => Promise<boolean>;
@@ -73,6 +79,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
   uid: null,
   email: null,
   error: null,
+  errorCode: null,
   busy: false,
 
   init: () => {
@@ -92,27 +99,29 @@ export const useAuthStore = create<AuthState>()((set) => ({
   },
 
   signIn: async (email, password) => {
-    set({ busy: true, error: null });
+    set({ busy: true, error: null, errorCode: null });
     try {
       await signInWithEmailAndPassword(getFirebaseAuth(), email.trim(), password);
       set({ busy: false });
       return true;
     } catch (e) {
       logAuthError('로그인', e);
-      set({ busy: false, error: toKoreanMessage(errorCodeOf(e)) });
+      const code = errorCodeOf(e);
+      set({ busy: false, error: toKoreanMessage(code), errorCode: code });
       return false;
     }
   },
 
   signUp: async (email, password) => {
-    set({ busy: true, error: null });
+    set({ busy: true, error: null, errorCode: null });
     try {
       await createUserWithEmailAndPassword(getFirebaseAuth(), email.trim(), password);
       set({ busy: false });
       return true;
     } catch (e) {
       logAuthError('계정 만들기', e);
-      set({ busy: false, error: toKoreanMessage(errorCodeOf(e)) });
+      const code = errorCodeOf(e);
+      set({ busy: false, error: toKoreanMessage(code), errorCode: code });
       return false;
     }
   },
@@ -122,5 +131,5 @@ export const useAuthStore = create<AuthState>()((set) => ({
     await signOut(getFirebaseAuth());
   },
 
-  clearError: () => set({ error: null }),
+  clearError: () => set({ error: null, errorCode: null }),
 }));

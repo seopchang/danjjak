@@ -34,6 +34,7 @@ export default function SettingsScreen() {
   const email = useAuthStore((s) => s.email);
   const busy = useAuthStore((s) => s.busy);
   const error = useAuthStore((s) => s.error);
+  const errorCode = useAuthStore((s) => s.errorCode);
   const signIn = useAuthStore((s) => s.signIn);
   const signUp = useAuthStore((s) => s.signUp);
   const logOut = useAuthStore((s) => s.logOut);
@@ -159,9 +160,17 @@ export default function SettingsScreen() {
           />
 
           {error ? (
-            <ThemedText type="body" style={{ color: theme.inkMuted }}>
-              {error}
-            </ThemedText>
+            <View style={styles.errorBox}>
+              <ThemedText type="body" style={{ color: theme.inkMuted }}>
+                {error}
+              </ThemedText>
+              {/* 릴리스 APK 에서는 콘솔을 볼 수 없어 원인 코드를 여기 같이 띄운다 */}
+              {errorCode ? (
+                <ThemedText type="meta" themeColor="textTertiary">
+                  {errorCode}
+                </ThemedText>
+              ) : null}
+            </View>
           ) : null}
 
           <Button
@@ -246,5 +255,12 @@ const styles = StyleSheet.create({
   switchLabel: {
     flex: 1,
     gap: 4,
+  },
+  errorBox: {
+    borderLeftWidth: Border.strong,
+    borderLeftColor: theme.inkMuted,
+    paddingLeft: 12,
+    paddingVertical: 2,
+    gap: 2,
   },
 });
