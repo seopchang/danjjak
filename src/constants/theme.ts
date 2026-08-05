@@ -78,6 +78,10 @@ export const FontFamily = {
   /** 한글 포함 가능한 모든 자리 */
   korean: 'Pretendard-Regular',
   koreanBold: 'Pretendard-Bold',
+  /** 노트 화면 손글씨 — 한글 글리프 있음 */
+  hand: 'NanumPenScript_400Regular',
+  /** 로고 "단어짝꿍", 스플래시 — 한글 글리프 있음 */
+  logo: 'NotoSansKR_900Black',
 } as const;
 
 /**
@@ -120,6 +124,16 @@ export const Type = {
   bodyBold: { fontFamily: FontFamily.koreanBold, fontSize: 14 },
   /** 보조 안내문 */
   caption: { fontFamily: FontFamily.korean, fontSize: 13 },
+  /** 노트 행 번호 */
+  noteNumber: { fontFamily: FontFamily.hand, fontSize: 19 },
+  /** 노트 단어 칸 (rotate -0.6deg 는 사용처에서 준다) */
+  noteTerm: { fontFamily: FontFamily.hand, fontSize: 26 },
+  /** 노트 뜻 칸 (rotate 0.5deg 는 사용처에서 준다) */
+  noteMeaning: { fontFamily: FontFamily.hand, fontSize: 23 },
+  /** 로고 큰 글자 (단·짝) — letterSpacing 은 -0.02em 환산 */
+  logoLarge: { fontFamily: FontFamily.logo, fontSize: 40, letterSpacing: -0.8 },
+  /** 로고 작은 글자 (어·꿍) */
+  logoSmall: { fontFamily: FontFamily.logo, fontSize: 21, letterSpacing: -0.42 },
 } as const;
 
 /** 화면 공통 여백 (스펙 1.4) */

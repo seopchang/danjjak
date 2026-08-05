@@ -3,6 +3,8 @@ import {
   JetBrainsMono_600SemiBold,
   JetBrainsMono_700Bold,
 } from '@expo-google-fonts/jetbrains-mono';
+import { NanumPenScript_400Regular } from '@expo-google-fonts/nanum-pen-script';
+import { NotoSansKR_900Black } from '@expo-google-fonts/noto-sans-kr';
 import {
   SpaceGrotesk_500Medium,
   SpaceGrotesk_600SemiBold,
@@ -35,6 +37,8 @@ export default function RootLayout() {
     JetBrainsMono_500Medium,
     JetBrainsMono_600SemiBold,
     JetBrainsMono_700Bold,
+    NanumPenScript_400Regular,
+    NotoSansKR_900Black,
     'Pretendard-Regular': require('../../assets/fonts/Pretendard-Regular.ttf'),
     'Pretendard-Bold': require('../../assets/fonts/Pretendard-Bold.ttf'),
   });
