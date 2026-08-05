@@ -3,7 +3,7 @@
 이 문서는 PC방 등 **매번 초기화되는 환경**에서 새 Claude Code 세션을 시작할 때,
 지금까지의 작업 맥락을 빠르게 파악하기 위한 요약입니다.
 
-마지막 갱신: 2026-08-04
+마지막 갱신: 2026-08-05
 
 ## 0. 환경 관련 중요 사실
 
@@ -108,9 +108,11 @@ StudySession { id, deckId, type(암기|복습|리콜), date, testedWordIds[],
 - **웹에서 이메일/비밀번호 로그인 성공 확인** (2026-08-04). 아래 4-2 참고.
 - APK 빌드 2회 연속 성공.
 
+- **폰 로그인 실패 원인 확정 (2026-08-05).** GitHub Secret 의 API 키 오타였다. 아래 4-2 참고.
+
 ### 아직 확인 안 된 것
 - ⚠️ **동기화 미검증.** 폰↔패드 간 실제 병합 동작 확인 필요.
-- ⚠️ **폰에서 로그인 실패 원인 미확정.** 범위는 좁혀졌음 (4-2).
+- ⚠️ **로그인 수정 후 실기기 미검증.** 키를 고쳤지만 APK 를 다시 빌드해서 확인해야 한다 (4-2).
 - ⚠️ **알림 실기기 미검증.** 웹에서는 확인 불가.
 - ⚠️ **새 디자인·새 아이콘 실기기 미확인.** 웹에서는 확인함.
 
@@ -156,36 +158,72 @@ Get-ChildItem -Recurse android\app\src\main\res -Filter "ic_launcher*"
 `android/` 는 `.gitignore`에 있어 커밋되지 않는다. CI가 매번 새로 만든다.
 로컬에 JDK17/Android SDK가 없어 `gradlew assembleRelease`까지는 검증 불가. prebuild 단계까지만 가능.
 
-## 4-2. 로그인 오류 조사 (범위 좁혀짐)
+## 4-2. 로그인 오류 — 원인 확정 (2026-08-05 해결)
 
-증상: **APK로 로그인 시도 → "네트워크에 연결할 수 없습니다"**.
-이 문구는 `auth/network-request-failed` 코드에서만 나온다(`auth-store.ts`의 `toKoreanMessage`).
+증상이었던 것: **APK로 로그인하면 실패. 컴퓨터 웹에서는 같은 계정으로 성공.**
 
-### 2026-08-04에 밝혀진 것 — **웹에서는 로그인이 정상 동작한다**
+### 원인: GitHub Secret 의 API 키에 오타 한 글자
 
-로컬 `.env`를 만들고 `npx expo start --web`으로 같은 계정 로그인을 시도했더니 **성공**했다.
-따라서 아래는 전부 배제된다:
+`EXPO_PUBLIC_FIREBASE_API_KEY` 시크릿에 **소문자 `l` 이 대문자 `I` 로** 들어가 있었다.
+(키의 9번째 글자. 폰트에 따라 눈으로는 구분이 안 된다.)
 
-- ✅ Firebase 설정값 6개 정상 (apiKey, projectId, appId 등)
-- ✅ 이메일/비밀번호 로그인 제공업체 활성화됨
-- ✅ 계정 자체 정상
-- ✅ Firestore 프로젝트 연결 정상
-- ✅ GitHub Secrets 6개 이름이 코드가 기대하는 이름과 일치 → **APK도 웹과 같은 값을 쓴다**
-- ✅ `AndroidManifest.xml`에 `android.permission.INTERNET` 있음 (이전 세션 확인)
+- 웹은 손으로 만든 로컬 `.env` 를 써서 **정상 동작**
+- APK 는 CI 가 Secrets 로 만든 `.env` 를 써서 **틀린 키를 사용**
 
-→ **원인은 안드로이드 환경 쪽으로 좁혀졌다.**
+즉 "APK 로 변환하면서 깨진 것"이 아니라, APK 만 처음부터 다른 키를 들고 있었다.
+안드로이드 환경(시계·VPN·DNS·네트워크)과는 무관했다.
 
-### 다음에 확인할 것
+**해결**: `gh secret set EXPO_PUBLIC_FIREBASE_API_KEY` 로 교체 완료.
+나머지 5개 값은 콘솔과 일치함을 확인했다 (전부 숫자·소문자라 같은 혼동이 없다).
 
-폰에서 로그인이 실패하면 **이제 화면에 원본 에러 코드가 함께 표시된다**
-(`auth-store.ts`의 `errorCode` → `settings.tsx`에서 오류 문구 아래 작게 노출).
-릴리스 APK는 콘솔을 볼 수 없어서 화면에 띄우도록 만든 것이다. 그 코드를 보고 판단할 것.
+### 이걸 어떻게 잡았는지 (같은 상황 재발 시 그대로 쓸 것)
 
-`network-request-failed`가 그대로 나온다면 안드로이드 쪽 흔한 원인:
-1. **폰 시간이 자동이 아님** → 시계가 틀어지면 SSL 검증이 실패하고 그게 `network-request-failed`로 나타난다. 가장 흔함.
-2. VPN 켜져 있음
-3. 사설 DNS(Private DNS) 설정됨
-4. 폰이 웹 테스트와 다른 네트워크(모바일 데이터 등)
+APK 안에 설정값이 그대로 박혀 있으므로, 빌드를 다시 하지 않고도 확인할 수 있다.
+
+```powershell
+gh release download apk-latest --repo seopchang/vocadeck --pattern "vocadeck.apk"
+# APK 는 zip. assets/index.android.bundle 을 꺼낸다.
+```
+
+**중요**: 릴리스 번들은 Hermes 바이트코드이고 문자열이 **UTF-16 으로** 저장된다.
+ASCII 로 grep 하면 하나도 안 잡혀서 "설정이 통째로 비었다"고 오판하게 된다.
+`[System.Text.Encoding]::Unicode.GetString($bytes)` 로 읽어야 보인다.
+값들은 `U+FEFF` 로 구분되어 연속으로 들어 있다.
+
+꺼낸 키가 진짜 유효한지는 로그인 엔드포인트에 직접 던져서 판정한다:
+
+```
+POST https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=<KEY>
+body: {"email":"...","password":"...","returnSecureToken":true}
+```
+
+- `API key not valid` → **키 자체가 무효** (오타·삭제된 키)
+- `INVALID_LOGIN_CREDENTIALS` → **키는 정상**, 계정/비번만 틀림
+- 403 `API_KEY_HTTP_REFERRER_BLOCKED` → 키에 리퍼러 제한이 걸림
+
+리퍼러 헤더를 붙이고/빼고 두 번 쏘면 "웹만 되는" 원인인 키 제한도 함께 가려낼 수 있다.
+(이번 건은 리퍼러 유무와 무관했으므로 제한 문제는 아니었다.)
+
+### 왜 여태 안 걸렸나 — 빌드가 이걸 못 잡는다
+
+`build-apk.yml` 의 검증 단계는 6개 중 `PROJECT_ID` 하나가 **비어 있지 않은지만** 본다.
+키가 틀려도 빌드는 초록불로 통과한다.
+→ 개선안: 빌드 중에 위 엔드포인트로 키를 실제로 한 번 던져보고
+   `API key not valid` 면 실패시키기. (워크플로 수정은 토큰에 `workflow` 스코프 필요)
+
+### 앱에 넣어둔 진단 기능
+
+설정 화면 로그인 영역의 **`로그인 연결 진단`** 버튼 (`src/lib/diagnostics.ts`).
+릴리스 APK 는 콘솔을 볼 수 없어서 결과를 화면에 직접 띄운다. 4단계를 보여준다:
+
+1. Firebase 설정값 6개 — 값과 공백/줄바꿈 혼입 여부
+2. 인터넷·TLS — gstatic 으로 HTTPS 가 뚫리는지
+3. 폰 시계 — 서버 시각과의 오차(초). 5분 이상이면 인증서 검증이 깨진다
+4. Firebase Auth 서버 — 같은 키로 요청해 구글이 돌려준 사유 문자열 그대로 노출
+
+로그인 실패 시 원본 예외 메시지(`errorDetail`)도 코드와 함께 표시된다.
+`auth/network-request-failed` 는 fetch 가 던진 예외를 **종류 불문하고 전부** 뭉뚱그린
+코드라 그것만 봐서는 원인이 안 갈린다는 점을 기억할 것.
 
 ## 5. 이미 겪은 런타임 크래시 (되돌리면 재발함)
 
@@ -241,7 +279,8 @@ npx expo start --web --port 8081
 ```
 
 ### 우선순위
-1. **폰에서 로그인 재시도 → 화면에 뜨는 에러 코드 확인** (4-2). 이게 제일 오래 막혀 있던 문제
+1. **새 APK 빌드 → 폰에서 로그인 확인** (4-2). 키를 고쳤으니 이제 되어야 한다.
+   안 되면 설정 화면의 `로그인 연결 진단` 버튼을 눌러 어느 단계에서 막히는지 볼 것
 2. 로그인 되면 → 폰↔패드 동기화 테스트
 3. 새 디자인·새 아이콘 실기기 확인
 4. 알림 실기기 확인 (자정 알림 시각을 아침으로 옮길지 사용자와 상의 — 아래 9장)
