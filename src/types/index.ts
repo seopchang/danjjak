@@ -14,10 +14,18 @@ export interface Syncable {
   deletedAt: string | null;
 }
 
+/**
+ * 단어장의 언어. 생성할 때 고르고 이후에는 바꾸지 않는다.
+ * 암기·복습·매치는 항상 한 덱 안에서만 돌기 때문에 이 값 하나로 언어가 고정된다.
+ */
+export type DeckLang = 'en' | 'ko';
+
 export interface Deck extends Syncable {
   id: string;
   name: string;
   createdAt: string;
+  /** 이전 버전 덱에는 없다. 읽을 때 'en'으로 본다 (deckLang 헬퍼). */
+  lang?: DeckLang;
 }
 
 export type WordStatus = '미암기' | '암기완료';
@@ -32,9 +40,15 @@ export interface Word extends Syncable {
   isFavorite: boolean;
   registeredAt: string;
   lastReviewedAt: string | null;
+  /** 덱의 언어를 그대로 상속한다. 개별 선택 UI는 없다. */
+  lang?: DeckLang;
 }
 
-export type StudySessionType = '암기' | '복습' | '리콜';
+/**
+ * '리콜'은 옛 이름이다. 이미 Firestore에 저장된 기록이 있어서 타입에서 지우지 못한다.
+ * 화면에는 항상 `sessionTypeLabel()`을 거쳐 '매치'로 보여준다.
+ */
+export type StudySessionType = '암기' | '복습' | '매치' | '리콜';
 
 export interface StudySession extends Syncable {
   id: string;
@@ -49,5 +63,41 @@ export interface StudySession extends Syncable {
   scopeLabel: string;
 }
 
-/** 리콜 테스트 출제 방향 */
+/** 단어 매치 출제 방향 */
 export type RecallDirection = 'meaningToTerm' | 'termToMeaning';
+
+/** 덱 언어를 읽는다. 구버전 덱(lang 없음)은 영어로 본다. */
+export function deckLang(deck: Pick<Deck, 'lang'> | undefined): DeckLang {
+  return deck?.lang === 'ko' ? 'ko' : 'en';
+}
+
+/** 저장된 옛 이름('리콜')을 화면 표기('매치')로 바꾼다. */
+export function sessionTypeLabel(type: StudySessionType): string {
+  return type === '리콜' ? '매치' : type;
+}
+
+/**
+ * 성장 캐릭터(강아지).
+ *
+ * 덱·단어와 달리 계정당 하나뿐이라 tombstone이 필요 없다. 대신 `updatedAt`은
+ * 그대로 두어 동기화 시 최신 승 판정을 같은 방식으로 쓴다.
+ */
+export interface Character {
+  /** 사용자가 정한 이름. 정하기 전에는 빈 문자열 */
+  name: string;
+  points: number;
+  coins: number;
+  /** 0~100 */
+  hunger: number;
+  /** 0~100 */
+  thirst: number;
+  /** 'YYYY-MM-DD'. 하루 1회 지급을 판정하는 기준 */
+  lastActiveDate: string | null;
+  /** 0~7 */
+  stageIndex: number;
+  /** 보유 장난감 id */
+  toys: string[];
+  /** 단계가 오르며 태어난 강아지 수 */
+  puppies: number;
+  updatedAt: string;
+}

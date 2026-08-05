@@ -293,6 +293,62 @@ npx expo start --web --port 8081
 - 사용자는 화면을 보면서 수정을 요청하는 방식으로 일한다. 실기기 확인은 사용자 몫.
 - 확인은 웹 미리보기(즉시) → APK(42분) 순서로. APK는 여러 변경을 모아서 한 번에.
 
+## 7-1. 진행 중 — HANDOFF "단짝" 리뉴얼 (2026-08-05 시작, 미완)
+
+원본 스펙과 자료는 **저장소 안에 넣어뒀다**: `handoff/`
+- `handoff/HANDOFF.md` — 확정 스펙 (이게 기준 문서다. 작업 전 반드시 정독)
+- `handoff/reference/web-prototype.dc.html` — 확정된 동작이 담긴 웹 프로토타입
+- `handoff/assets-original/` — 전처리 전 원본 이미지 26개
+- `handoff/prep-assets.ps1` — 아래 전처리를 수행한 스크립트
+
+### 끝난 것
+
+- **에셋 26개 배치 완료** (`assets/illustrations/`). 5.6MB → 383KB.
+  - 원본은 **투명 픽셀 아래 RGB에 회색/녹색이 남아 있어** 축소 시 가장자리로 번졌다
+    (8장에 기록된 것과 같은 현상). `complete-badge` 109,109,109 / `empty-flashcards` 153,153,154 /
+    `empty-notebook` 139,139,140 / `icon-stats` **174,178,144 녹색**.
+  - 전처리: 투명 픽셀 RGB를 ink 로 통일 → 투명 여백 크롭 → 표시 크기의 3배로 리사이즈.
+    다시 만들 일이 생기면 `handoff/prep-assets.ps1` 을 그대로 쓸 것.
+- **폰트 패키지 설치**: `@expo-google-fonts/nanum-pen-script`, `@expo-google-fonts/noto-sans-kr`
+  (package.json 반영 완료. **아직 `_layout.tsx` 에서 로드하지 않았다.**)
+- **데이터 모델** (`src/types/index.ts`)
+  - `Deck.lang?: 'en' | 'ko'` / `Word.lang?` 추가 (구버전 레코드는 없으므로 optional,
+    읽을 때는 `deckLang()` 헬퍼가 'en' 으로 본다)
+  - `StudySessionType` 에 `'매치'` 추가. **`'리콜'` 은 지우지 않았다** — 이미 Firestore 에
+    저장된 기록이 있기 때문. 화면 표기는 항상 `sessionTypeLabel()` 을 거쳐 '매치' 로 보여준다.
+  - `Character` 타입 추가
+- **캐릭터 스토어** (`src/stores/character-store.ts`) — 8단계 `STAGES`, `TOYS` 6종,
+  하루 1회 `awardDaily()`, `feed`/`water`/`buyToy`, 애니메이션 트리거 `requestDance()`.
+  `todayKey()` 는 로컬 날짜를 쓴다 (`toISOString()` 은 UTC 라 자정 근처에서 하루가 어긋난다).
+- **Firebase 동기화 확장** (`src/lib/sync.ts`) — 캐릭터는 계정당 하나뿐이라 목록 병합이 아니라
+  단일 문서 `users/{uid}/state/character` 로 주고받는다. `updatedAt` 최신 승.
+  `firestore.rules` 는 `{document=**}` 와일드카드라 **규칙 수정 불필요**(확인함).
+
+### 남은 것 (순서대로)
+
+1. `_layout.tsx` 에 Nanum Pen Script / Noto Sans KR 로드 + `theme.ts` 에 타이포 역할 추가
+   (노트 손글씨 3종, 로고)
+2. 단어장 생성 폼에 **언어 선택 칩**(`영어`/`한국어`) + 덱 상세 단어 추가 **placeholder 분기**
+   (HANDOFF §4.1-7, §4.2-3)
+3. **캐릭터 카드** 컴포넌트 (HANDOFF §5.4) — 덱 목록 상단, 동기화 바 아래
+4. **동작 애니메이션** (§5.5) — 6단계 이상은 프레임 4장 순환, 미만은 트랜스폼만
+5. **스플래시** (§5.6) — 앱 시작 2초 + 동기화 바 탭
+6. **노트 화면** 신규 라우트 `src/app/deck/[deckId]/note.tsx` (§7)
+7. 세션 저장 후 `awardDaily()` 호출 연결 (study/review/recall 3곳, §4.3·§4.4)
+8. 이름 변경: 앱 이름 `보카덱` → **`단짝`**, `리콜` → **`단어 매치`** 전역 치환 (§3)
+9. §3 문구 교체 — 통계 빈 상태, 매치 부족 안내 (나머지 4곳은 이미 일치함)
+10. **GitHub 저장소 이름 변경**: `vocadeck` → `danjjak`
+    (GitHub 저장소명은 한글 불가라 로마자. `gh repo rename danjjak` 후 `git remote set-url`)
+
+### 폰트 관련 주의 — HANDOFF 와 의도적으로 다르게 간다
+
+HANDOFF §1.2/§1.3 은 앱 타이틀·화면 타이틀·섹션 헤딩·버튼에 **Space Grotesk** 를 지정하지만,
+이 자리들은 전부 한글이 들어간다(`단짝`, `설정`, `학습 시작`, `암기`). Space Grotesk 에는
+한글 글리프가 없어 안드로이드 폴백이 일정하지 않다 — **이미 8장에서 겪고 Pretendard 로 바꾼 문제다.**
+그래서 한글이 들어갈 수 있는 역할은 계속 Pretendard 를 쓴다.
+Space Grotesk 는 라틴 전용(term)에만, Nanum Pen Script(노트)·Noto Sans KR(로고)은
+둘 다 한글 글리프가 있으므로 스펙대로 쓰면 된다.
+
 ## 8. 디자인 시스템 (2026-08-04 전면 리뉴얼)
 
 카드형 UI(둥근 모서리 + 그림자 + 배경면)를 **선(線) 기반 레이아웃**으로 전면 교체했다.
