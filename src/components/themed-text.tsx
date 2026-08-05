@@ -24,7 +24,12 @@ export type TextRole =
   | 'button'
   | 'body'
   | 'bodyBold'
-  | 'caption';
+  | 'caption'
+  | 'noteNumber'
+  | 'noteTerm'
+  | 'noteMeaning'
+  | 'logoLarge'
+  | 'logoSmall';
 
 export type ThemedTextProps = TextProps & {
   type?: TextRole;
@@ -59,4 +64,9 @@ const styles = StyleSheet.create({
   body: { ...Type.body, lineHeight: 20 },
   bodyBold: { ...Type.bodyBold, lineHeight: 20 },
   caption: { ...Type.caption, lineHeight: 19 },
+  noteNumber: Type.noteNumber,
+  noteTerm: Type.noteTerm,
+  noteMeaning: Type.noteMeaning,
+  logoLarge: Type.logoLarge,
+  logoSmall: Type.logoSmall,
 });

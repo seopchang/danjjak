@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert, Image, Pressable, StyleSheet, View } from 'react-native';
 
+import { CharacterCard } from '@/components/character/character-card';
 import { Chip } from '@/components/common/chip';
 import { Screen } from '@/components/common/screen';
 import { TextField } from '@/components/common/text-field';
@@ -98,6 +99,8 @@ export default function DeckListScreen() {
       </View>
 
       <SyncBar />
+
+      <CharacterCard />
 
       {/* 오늘 복습할 거리를 가장 먼저 보여준다 — 앱을 여는 주된 이유이기 때문. */}
       <Pressable onPress={() => router.push('/review')} disabled={!hasReview}>
