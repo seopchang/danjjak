@@ -184,7 +184,7 @@ export default function DeckDetailScreen() {
             style={styles.flexButton}
           />
           <Button
-            label="리콜"
+            label="매치"
             variant="outline"
             disabled={recallCount < 4}
             onPress={() =>
@@ -204,7 +204,7 @@ export default function DeckDetailScreen() {
               resizeMode="contain"
             />
             <ThemedText type="caption" themeColor="textTertiary" style={styles.recallHintText}>
-              리콜 테스트는 단어가 4개 이상일 때 시작할 수 있습니다.
+              단어 매치는 단어가 4개 이상일 때 시작할 수 있습니다.
             </ThemedText>
           </View>
         ) : null}

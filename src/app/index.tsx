@@ -84,7 +84,7 @@ export default function DeckListScreen() {
       <View style={styles.header}>
         <View style={styles.brand}>
           <View style={styles.brandMark} />
-          <ThemedText type="appTitle">보카덱</ThemedText>
+          <ThemedText type="appTitle">단짝</ThemedText>
         </View>
         <Pressable style={styles.headerAction} onPress={() => router.push('/settings')}>
           <Image

@@ -89,7 +89,7 @@ export const FontFamily = {
  * `-Ko` 접미사는 한글이 섞일 수 있어 Pretendard 로 대체한 자리다.
  */
 export const Type = {
-  /** 앱 타이틀 "보카덱" */
+  /** 앱 타이틀 "단짝" */
   appTitle: { fontFamily: FontFamily.koreanBold, fontSize: 28, letterSpacing: -0.3 },
   /** 화면 타이틀 */
   screenTitle: { fontFamily: FontFamily.koreanBold, fontSize: 19 },
@@ -99,7 +99,7 @@ export const Type = {
   rowTitle: { fontFamily: FontFamily.koreanBold, fontSize: 17 },
   /** 플래시카드의 단어(term) — 라틴 */
   term: { fontFamily: FontFamily.display, fontSize: 34 },
-  /** 리콜 문제 텍스트 — 한글일 수 있어 Pretendard */
+  /** 단어 매치 문제 텍스트 — 한글일 수 있어 Pretendard */
   question: { fontFamily: FontFamily.koreanBold, fontSize: 22 },
   /** 복습 개수 같은 큰 숫자 */
   bigNumber: { fontFamily: FontFamily.monoBold, fontSize: 44 },

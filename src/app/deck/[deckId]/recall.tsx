@@ -140,7 +140,7 @@ export default function RecallModeScreen() {
       <Pressable onPress={() => router.back()} hitSlop={10}>
         <ThemedText type="screenTitle">←</ThemedText>
       </Pressable>
-      <ThemedText type="screenTitle">리콜 테스트</ThemedText>
+      <ThemedText type="screenTitle">단어 매치</ThemedText>
       <View style={styles.headerSpacer} />
     </View>
   );
@@ -164,8 +164,8 @@ export default function RecallModeScreen() {
           ) : null}
           <ThemedText type="sectionHeading" style={styles.summaryTitle}>
             {notEnough
-              ? '리콜 테스트를 만들 단어가 부족합니다. (4개 이상 필요)'
-              : '리콜 테스트를 완료했습니다.'}
+              ? '단어 매치를 만들 단어가 부족합니다. (4개 이상 필요)'
+              : '단어 매치를 완료했습니다.'}
           </ThemedText>
           {finished ? (
             <ThemedText type="body" themeColor="textSecondary" style={styles.summaryResult}>

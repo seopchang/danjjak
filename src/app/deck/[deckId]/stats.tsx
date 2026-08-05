@@ -72,7 +72,7 @@ export default function StatsScreen() {
 
       {sessions.length === 0 ? (
         <ThemedText type="body" themeColor="textSecondary">
-          아직 학습 기록이 없습니다. 암기·복습·리콜을 한 번 진행하면 여기에 쌓입니다.
+          아직 학습 기록이 없습니다. 암기·복습·단어 매치를 한 번 진행하면 여기에 쌓입니다.
         </ThemedText>
       ) : (
         sessions.map((session) => {

@@ -76,7 +76,7 @@ export default function SettingsScreen() {
       if (!scheduled) {
         Alert.alert(
           '알림 권한이 필요합니다',
-          '휴대폰 설정 → 앱 → 보카덱 → 알림에서 알림을 허용해주세요.'
+          '휴대폰 설정 → 앱 → 단짝 → 알림에서 알림을 허용해주세요.'
         );
       }
     } finally {
