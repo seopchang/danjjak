@@ -39,19 +39,38 @@ APK는 최종 확인용입니다(빌드 42분). 아래 4-1 참고.
 
 `.env`는 `.gitignore`에 있어 커밋되지 않습니다. 새 컴퓨터마다 다시 만들어야 합니다.
 
-- 값 위치: Firebase 콘솔 → 프로젝트 **`vocadeck-4d370`** → 프로젝트 설정 → 내 앱 → SDK 설정 및 구성
-- 키 이름 6개 (GitHub Secrets에 있는 이름과 동일 — APK 빌드도 같은 값을 씁니다):
-  ```
-  EXPO_PUBLIC_FIREBASE_API_KEY
-  EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN
-  EXPO_PUBLIC_FIREBASE_PROJECT_ID
-  EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET
-  EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-  EXPO_PUBLIC_FIREBASE_APP_ID
-  ```
-- GitHub Secrets는 쓰기 전용이라 읽어올 수 없습니다. 콘솔에서 복사해야 합니다.
-- `.env` 없이도 앱은 **로컬 전용 모드**로 동작합니다. 단, 그러면 설정 화면에 **로그인 폼 자체가 안 나옵니다**
-  (`isFirebaseConfigured()` 가드). 로그인 관련 작업을 하려면 `.env`가 반드시 필요합니다.
+아래 내용을 저장소 루트에 `.env` 로 그대로 저장하면 됩니다. **직접 타이핑하지 말고 복사하세요**
+(아래 "오타 주의" 참고).
+
+```
+EXPO_PUBLIC_FIREBASE_API_KEY=AIzaSyDklrSEJ3ndmA9RGkaYIHS161YO2vxUtDo
+EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=vocadeck-4d370.firebaseapp.com
+EXPO_PUBLIC_FIREBASE_PROJECT_ID=vocadeck-4d370
+EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=vocadeck-4d370.firebasestorage.app
+EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=769638786254
+EXPO_PUBLIC_FIREBASE_APP_ID=1:769638786254:web:840c040857c8fa742edc9f
+```
+
+**왜 이걸 저장소에 적어두는가**: Firebase 웹 SDK config 는 비밀값이 아닙니다. 클라이언트 번들에
+어차피 그대로 들어가고, 실제 보호는 Firestore 보안 규칙(`firestore.rules`)이 합니다.
+게다가 이 값들은 **공개 릴리스 APK 안에 이미 박혀 있어서** 누구나 꺼내볼 수 있습니다
+(4-2장의 조사가 바로 그 방법으로 진행됐습니다). PC방이라 매 세션 콘솔을 다시 뒤지는 비용이
+더 커서 여기 적어둡니다. 값이 바뀌면 Firebase 콘솔 → 프로젝트 `vocadeck-4d370` →
+프로젝트 설정 → 내 앱 → SDK 설정 및 구성에서 다시 가져오세요.
+
+**오타 주의 — 실제로 한 번 당했습니다.** API 키 9번째 글자는 **소문자 `l`(엘)** 입니다.
+이걸 대문자 `I`(아이)로 잘못 넣어서 APK 로그인이 오래 막혀 있었습니다 (4-2장).
+키에는 `I`, `l`, `1`, `O`, `0` 이 섞여 있으니 **눈으로 옮겨 적지 말고 반드시 복사**하세요.
+
+같은 6개 이름이 GitHub Secrets 에도 등록돼 있고 APK 빌드는 그쪽 값을 씁니다.
+Secrets 는 쓰기 전용이라 읽어올 수 없으므로, 값이 의심되면 위 값으로 다시 넣으세요:
+```powershell
+gh secret set EXPO_PUBLIC_FIREBASE_API_KEY --body "AIzaSyDklrSEJ3ndmA9RGkaYIHS161YO2vxUtDo"
+```
+
+`.env` 없이도 앱은 **로컬 전용 모드**로 동작합니다. 단, 그러면 설정 화면에 **로그인 폼 자체가 안 나옵니다**
+(`isFirebaseConfigured()` 가드). 로그인 관련 작업을 하려면 `.env`가 반드시 필요합니다.
+`.env` 는 **서버 시작 시점에만** 읽히므로, 만든 뒤에는 개발 서버를 다시 띄워야 합니다.
 
 ## 1. 이 앱은 무엇인가
 

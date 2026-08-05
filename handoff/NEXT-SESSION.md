@@ -10,8 +10,11 @@ $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";"
 그다음:
 1. gh auth login --web 으로 디바이스 코드 알려줘. 내가 브라우저에 입력할게.
 2. gh repo clone seopchang/vocadeck 하고 npm install
-   (저장소 이름을 danjjak으로 바꿨으면 그걸로 클론해)
+   (저장소 이름을 바꿨으면 그걸로 클론해)
 3. git config user.name "seopchang" / user.email "yunseobchang123@gmail.com"
+3-1. PROGRESS.md 0장의 ".env 재생성"에 값 6개가 적혀 있어. 그대로 복사해서 .env 만들어줘.
+     (타이핑하지 말고 복사할 것 — API 키 9번째 글자가 소문자 l인데 대문자 I로 잘못 넣어서
+      예전에 로그인이 오래 막혔던 적 있어)
 4. PROGRESS.md 전체 읽어. 특히 0장(환경), 7-1장(지금 하던 작업), 8장(디자인 시스템).
 5. handoff/HANDOFF.md 전체 읽어. 이게 지금 적용 중인 기준 스펙이야.
    handoff/reference/web-prototype.dc.html 은 확정된 동작이 담긴 웹 프로토타입이고.
@@ -44,8 +47,7 @@ $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";"
 
 - Expo Go는 안 써. 디자인 확인은 웹 미리보기로: npx expo start --web --port 8081
   → 브라우저에서 http://localhost:8081
-  (.env가 없으면 로그인 폼이 안 뜨니까, 로그인 관련 작업할 거면 .env부터 만들어야 해.
-   키 6개는 Firebase 콘솔 vocadeck-4d370 → 프로젝트 설정 → SDK 설정 및 구성)
+  (.env는 위 3-1에서 만들어. 서버 시작 시점에만 읽히니까 .env 만든 뒤에 서버 띄워야 해)
 - 최종 확인은 APK 빌드: gh workflow run build-apk.yml — 42분 걸림. 변경 모아서 한 번에.
 - 내가 "작업 종료"라고 하면 gh auth logout 하고 실행 중인 프로세스 정리해줘.
 
