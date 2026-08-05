@@ -8,6 +8,7 @@ import { Screen } from '@/components/common/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Border, Colors } from '@/constants/theme';
 import { SlideDirection, useFlashCardMotion } from '@/hooks/use-flash-card-motion';
+import { useCharacterStore } from '@/stores/character-store';
 import { useDecksStore } from '@/stores/decks-store';
 import { useSessionsStore } from '@/stores/sessions-store';
 import { useWordsStore } from '@/stores/words-store';
@@ -32,6 +33,7 @@ export default function DailyReviewScreen() {
   const markStatus = useWordsStore((s) => s.markStatus);
   const decks = useDecksStore((s) => s.decks);
   const addSession = useSessionsStore((s) => s.addSession);
+  const awardDaily = useCharacterStore((s) => s.awardDaily);
 
   // 큐는 화면에 들어온 시점에 한 번만 정한다.
   const [queue] = useState(() => buildDailyReviewQueue(allWords).map((w) => w.id));
@@ -88,6 +90,9 @@ export default function DailyReviewScreen() {
         scopeLabel: '매일 복습',
       });
     }
+
+    // 덱별로 여러 건이 저장돼도 지급은 하루 1회다 (§5.2).
+    if (answers.current.length > 0) awardDaily();
   };
 
   const commitAction = (isCorrect: boolean, direction: SlideDirection) => {

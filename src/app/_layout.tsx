@@ -17,8 +17,10 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { SplashOverlay } from '@/components/splash-overlay';
 import { configureNotificationHandler } from '@/lib/notifications';
 import { useAuthStore } from '@/stores/auth-store';
+import { useSplashStore } from '@/stores/splash-store';
 
 // 앱이 떠 있는 동안에도 알림 배너를 띄운다. 모듈 로드 시점에 한 번만 걸면 된다.
 configureNotificationHandler();
@@ -28,6 +30,7 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   const initAuth = useAuthStore((s) => s.init);
+  const showSplash = useSplashStore((s) => s.show);
 
   // Space Grotesk / JetBrains Mono 는 라틴 전용이라 한글은 Pretendard 가 받는다.
   const [fontsLoaded, fontError] = useFonts({
@@ -47,6 +50,11 @@ export default function RootLayout() {
   useEffect(() => {
     initAuth();
   }, [initAuth]);
+
+  // 앱을 열면 스플래시를 2초 띄운다 (HANDOFF §5.6).
+  useEffect(() => {
+    showSplash('불러오는 중');
+  }, [showSplash]);
 
   // 복습 알림을 눌러서 들어오면 바로 복습 화면을 연다.
   useEffect(() => {
@@ -70,6 +78,7 @@ export default function RootLayout() {
       {/* 라이트 고정 — 시스템이 다크여도 흑백 팔레트를 그대로 쓴다. */}
       <ThemeProvider value={DefaultTheme}>
         <Stack screenOptions={{ headerShown: false }} />
+        <SplashOverlay />
       </ThemeProvider>
     </SafeAreaProvider>
   );

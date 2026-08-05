@@ -8,6 +8,7 @@ import { Screen } from '@/components/common/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Border, Colors } from '@/constants/theme';
 import { SlideDirection, useFlashCardMotion } from '@/hooks/use-flash-card-motion';
+import { useCharacterStore } from '@/stores/character-store';
 import { useSessionsStore } from '@/stores/sessions-store';
 import { deckWords, useWordsStore } from '@/stores/words-store';
 import { shuffled } from '@/utils/shuffle';
@@ -24,6 +25,7 @@ export default function StudyModeScreen() {
   const allWords = useWordsStore((s) => s.words);
   const markStatus = useWordsStore((s) => s.markStatus);
   const addSession = useSessionsStore((s) => s.addSession);
+  const awardDaily = useCharacterStore((s) => s.awardDaily);
 
   const isMemorize = mode === 'memorize';
   const targetStatus = isMemorize ? '미암기' : '암기완료';
@@ -72,6 +74,8 @@ export default function StudyModeScreen() {
         durationSeconds: Math.round((Date.now() - startedAt.current) / 1000),
         scopeLabel: `${isMemorize ? '암기' : '복습'} 테스트${favorites === '1' ? ' (즐겨찾기)' : ''}`,
       });
+      // 하루 1회만 실제로 지급된다 (§5.2).
+      awardDaily();
     }
     setFinished(true);
   };

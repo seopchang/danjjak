@@ -7,6 +7,7 @@ import { Chip } from '@/components/common/chip';
 import { Screen } from '@/components/common/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Border, Colors } from '@/constants/theme';
+import { useCharacterStore } from '@/stores/character-store';
 import { useSessionsStore } from '@/stores/sessions-store';
 import { deckWords, useWordsStore } from '@/stores/words-store';
 import { RecallDirection, Word } from '@/types';
@@ -58,6 +59,7 @@ export default function RecallModeScreen() {
   const allWords = useWordsStore((s) => s.words);
   const markStatus = useWordsStore((s) => s.markStatus);
   const addSession = useSessionsStore((s) => s.addSession);
+  const awardDaily = useCharacterStore((s) => s.awardDaily);
 
   const [direction, setDirection] = useState<RecallDirection>('meaningToTerm');
   const [round, setRound] = useState(0);
@@ -88,15 +90,17 @@ export default function RecallModeScreen() {
     if (!finished && correct + incorrect > 0) {
       addSession({
         deckId,
-        type: '리콜',
+        type: '매치',
         date: new Date().toISOString(),
         testedWordIds: questions.slice(0, testedCount).map((q) => q.wordId),
         correctCount: correct,
         incorrectCount: incorrect,
         accuracy: Math.round((correct / (correct + incorrect)) * 100),
         durationSeconds: Math.round((Date.now() - startedAt.current) / 1000),
-        scopeLabel: `리콜 테스트${favorites === '1' ? ' (즐겨찾기)' : ''}`,
+        scopeLabel: `단어 매치${favorites === '1' ? ' (즐겨찾기)' : ''}`,
       });
+      // 하루 1회만 실제로 지급된다 (§5.2).
+      awardDaily();
     }
     setFinished(true);
   };

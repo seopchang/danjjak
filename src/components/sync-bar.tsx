@@ -6,6 +6,7 @@ import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
 import { isFirebaseConfigured } from '@/lib/firebase';
 import { useAuthStore } from '@/stores/auth-store';
+import { useSplashStore } from '@/stores/splash-store';
 import { useSyncStore } from '@/stores/sync-store';
 
 /**
@@ -21,6 +22,7 @@ export function SyncBar() {
   const lastError = useSyncStore((s) => s.lastError);
   const lastSummary = useSyncStore((s) => s.lastSummary);
   const run = useSyncStore((s) => s.run);
+  const showSplash = useSplashStore((s) => s.show);
 
   // 앱 안에서 borderRadius 를 쓰는 단 두 곳 중 하나 (6x6 상태 점)
   const Dot = ({ on }: { on: boolean }) => (
@@ -72,7 +74,13 @@ export function SyncBar() {
       : '아직 동기화하지 않았습니다';
 
   return (
-    <Pressable onPress={() => run(uid)} disabled={syncing} style={styles.bar}>
+    <Pressable
+      onPress={() => {
+        showSplash('동기화 중');
+        run(uid);
+      }}
+      disabled={syncing}
+      style={styles.bar}>
       {syncing ? (
         <ActivityIndicator size="small" color={theme.textSecondary} />
       ) : (
