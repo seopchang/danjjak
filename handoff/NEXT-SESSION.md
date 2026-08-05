@@ -39,10 +39,10 @@ APK를 빌드해서 폰에서 두 가지를 한 번에 확인해줘:
 
 ## 남아 있는 자잘한 것
 
-- `.github/workflows/build-apk.yml`에 아직 "보카덱 APK (최신)" 문구와 vocadeck.apk 파일명이 남아 있어.
-  이 파일은 토큰에 workflow 스코프가 있어야 푸시돼: gh auth refresh -h github.com -s workflow
-  (디바이스 코드 재입력 필요). 기능엔 영향 없고 릴리스 표시 이름·파일명뿐이야.
 - 자정(00:00) 복습 알림 시각을 아침으로 옮길지 정해야 해 (PROGRESS 9장).
+- 참고: 워크플로 파일(.github/workflows/*)을 고치려면 토큰에 workflow 스코프가 필요해.
+  gh auth login --web 은 기본으로 안 줘서, 필요하면 gh auth refresh -h github.com -s workflow 로
+  디바이스 코드를 한 번 더 받아야 해.
 
 ## 꼭 지킬 것
 

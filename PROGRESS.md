@@ -147,8 +147,8 @@ gh run list --workflow build-apk.yml --limit 5
 ```
 
 - 빌드 시간 **약 42분**. 결과: https://github.com/seopchang/danjjak/actions
-- 성공 시 APK: https://github.com/seopchang/danjjak/releases (`vocadeck.apk`, `apk-latest` 태그)
-  - 파일명은 아직 `vocadeck.apk` 입니다. 워크플로 파일 수정에는 토큰 `workflow` 스코프가 필요합니다(4-1 아래 참고).
+- 성공 시 APK: https://github.com/seopchang/danjjak/releases (`danjjak.apk`, `apk-latest` 태그)
+  - 2026-08-05 이전 빌드의 릴리스 자산 이름은 `vocadeck.apk` 였습니다.
 
 ### 빌드 이력
 | run | 결과 | 비고 |
@@ -205,7 +205,7 @@ Get-ChildItem -Recurse android\app\src\main\res -Filter "ic_launcher*"
 APK 안에 설정값이 그대로 박혀 있으므로, 빌드를 다시 하지 않고도 확인할 수 있다.
 
 ```powershell
-gh release download apk-latest --repo seopchang/danjjak --pattern "vocadeck.apk"
+gh release download apk-latest --repo seopchang/danjjak --pattern "danjjak.apk"
 # APK 는 zip. assets/index.android.bundle 을 꺼낸다.
 ```
 
@@ -310,7 +310,6 @@ npx expo start --web --port 8081
    - 7-1 리뉴얼 결과물 — 캐릭터 애니메이션, 스플래시, 노트 화면 모눈·손글씨.
 2. 로그인 되면 → 폰↔패드 동기화 테스트 (캐릭터도 같이 넘어가는지 확인)
 3. 알림 실기기 확인 (자정 알림 시각을 아침으로 옮길지 사용자와 상의 — 아래 9장)
-4. 여유가 되면 `build-apk.yml` 문구 교체 (`workflow` 스코프 필요, 7-1 참고)
 
 ## 7. 작업 방식 메모
 
@@ -385,10 +384,6 @@ npx expo start --web --port 8081
 
 ### 아직 안 한 것
 
-- ⚠️ **`.github/workflows/build-apk.yml` 문구 교체.** 릴리스 이름이 아직 `보카덱 APK (최신)` 이고
-  APK 파일명도 `vocadeck.apk` 다. 워크플로 파일은 토큰에 **`workflow` 스코프**가 있어야 푸시된다
-  (`gh auth refresh -h github.com -s workflow`, 디바이스 코드 재입력 필요).
-  기능에는 영향이 없다 — 릴리스 표시 이름과 파일명뿐이다.
 - ⚠️ **실기기 미검증.** 웹 번들은 통과했고 `tsc` 도 통과하지만, 아래는 APK 로만 확인된다:
   캐릭터 애니메이션 실제 프레임 전환, 스플래시 타이밍, 노트 화면 모눈 렌더링, 손글씨 폰트 폴백.
 

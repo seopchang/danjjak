@@ -64,24 +64,24 @@ jobs:
           ./gradlew assembleRelease --no-daemon
 
       - name: Rename APK
-        run: cp android/app/build/outputs/apk/release/app-release.apk vocadeck.apk
+        run: cp android/app/build/outputs/apk/release/app-release.apk danjjak.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: vocadeck-apk
-          path: vocadeck.apk
+          name: danjjak-apk
+          path: danjjak.apk
 
       - name: Publish to Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: apk-latest
-          name: 보카덱 APK (최신)
+          name: 단짝 APK (최신)
           body: |
-            최신 빌드 APK입니다. 아래 vocadeck.apk 를 폰/패드에서 받아 설치하세요.
+            최신 빌드 APK입니다. 아래 danjjak.apk 를 폰/패드에서 받아 설치하세요.
             (설치 시 '알 수 없는 출처 허용'이 필요할 수 있습니다.)
 
             폰과 패드 둘 다 설치한 뒤, 각각 설정 화면에서 같은 계정으로
             로그인하고 동기화 버튼을 누르면 단어장이 합쳐집니다.
-          files: vocadeck.apk
+          files: danjjak.apk
           prerelease: true
