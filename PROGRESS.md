@@ -15,9 +15,13 @@
     $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
     ```
   - 2026-08-04 세션에서 설치된 버전: Node 24.19.0 / Git 2.55.0.3 / gh 2.97.0
-- GitHub: **https://github.com/seopchang/vocadeck**. `gh auth login --web` 디바이스 코드 인증 필요(사용자가 브라우저에서 직접 입력 — 자동화 불가). 인증 후 `gh auth setup-git`.
+- GitHub: **https://github.com/seopchang/danjjak** (2026-08-05 에 `vocadeck` 에서 이름 변경. 옛 URL 은 GitHub 가 리다이렉트해준다). `gh auth login --web` 디바이스 코드 인증 필요(사용자가 브라우저에서 직접 입력 — 자동화 불가). 인증 후 **`gh auth setup-git` 을 꼭 실행할 것** — 안 하면 push 에서 `could not read Username` 으로 막힌다.
   - git 사용자: `seopchang` / `yunseobchang123@gmail.com` (새 PC에서는 `git config user.name/user.email` 직접 설정해야 함)
 - **커밋 메시지에 한글**을 넣을 때 PowerShell 인라인 `-m`은 인코딩이 깨집니다 → 파일로 작성 후 `git commit -F <file>` 사용.
+  - 이때 `Out-File -Encoding utf8` 은 **BOM 을 붙여서** 커밋 제목 앞에 `﻿` 가 남습니다. 반드시 아래처럼 BOM 없이 쓸 것:
+    ```powershell
+    [System.IO.File]::WriteAllText("$PWD\.git\COMMIT_MSG.txt", $msg, (New-Object System.Text.UTF8Encoding($false)))
+    ```
 
 ### 확인은 웹 미리보기로 (가장 빠름)
 
@@ -74,7 +78,7 @@ gh secret set EXPO_PUBLIC_FIREBASE_API_KEY --body "AIzaSyDklrSEJ3ndmA9RGkaYIHS16
 
 ## 1. 이 앱은 무엇인가
 
-**보카덱(VocaDeck)** — 영어 단어 암기 앱. 자매 프로젝트인 [study-app](https://github.com/seopchang/study-app)(국어 어휘 앱 "범작가 클래스")의 어휘장 기능을 영어용으로 다시 만들고, **폰과 패드에서 같이 쓰기 위해 Firebase 동기화**를 추가한 것입니다.
+**단짝** (구 보카덱/VocaDeck) — 단어 암기 앱. 영어 단어장과 한국어 단어장을 모두 만들 수 있다. 자매 프로젝트인 [study-app](https://github.com/seopchang/study-app)(국어 어휘 앱 "범작가 클래스")의 어휘장 기능을 영어용으로 다시 만들고, **폰과 패드에서 같이 쓰기 위해 Firebase 동기화**를 추가한 것입니다.
 
 ## 2. 확정된 설계 결정
 
@@ -142,8 +146,9 @@ gh workflow run build-apk.yml
 gh run list --workflow build-apk.yml --limit 5
 ```
 
-- 빌드 시간 **약 42분**. 결과: https://github.com/seopchang/vocadeck/actions
-- 성공 시 APK: https://github.com/seopchang/vocadeck/releases (`vocadeck.apk`, `apk-latest` 태그)
+- 빌드 시간 **약 42분**. 결과: https://github.com/seopchang/danjjak/actions
+- 성공 시 APK: https://github.com/seopchang/danjjak/releases (`vocadeck.apk`, `apk-latest` 태그)
+  - 파일명은 아직 `vocadeck.apk` 입니다. 워크플로 파일 수정에는 토큰 `workflow` 스코프가 필요합니다(4-1 아래 참고).
 
 ### 빌드 이력
 | run | 결과 | 비고 |
@@ -200,7 +205,7 @@ Get-ChildItem -Recurse android\app\src\main\res -Filter "ic_launcher*"
 APK 안에 설정값이 그대로 박혀 있으므로, 빌드를 다시 하지 않고도 확인할 수 있다.
 
 ```powershell
-gh release download apk-latest --repo seopchang/vocadeck --pattern "vocadeck.apk"
+gh release download apk-latest --repo seopchang/danjjak --pattern "vocadeck.apk"
 # APK 는 zip. assets/index.android.bundle 을 꺼낸다.
 ```
 
@@ -286,8 +291,9 @@ $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";"
 gh auth login --web
 gh auth setup-git
 # 4. 클론 & 설치
-gh repo clone seopchang/vocadeck
-cd vocadeck
+gh auth setup-git
+gh repo clone seopchang/danjjak
+cd danjjak
 npm install
 git config user.name "seopchang"
 git config user.email "yunseobchang123@gmail.com"
@@ -298,11 +304,13 @@ npx expo start --web --port 8081
 ```
 
 ### 우선순위
-1. **새 APK 빌드 → 폰에서 로그인 확인** (4-2). 키를 고쳤으니 이제 되어야 한다.
-   안 되면 설정 화면의 `로그인 연결 진단` 버튼을 눌러 어느 단계에서 막히는지 볼 것
-2. 로그인 되면 → 폰↔패드 동기화 테스트
-3. 새 디자인·새 아이콘 실기기 확인
-4. 알림 실기기 확인 (자정 알림 시각을 아침으로 옮길지 사용자와 상의 — 아래 9장)
+1. **새 APK 빌드 → 폰에서 확인.** 한 번의 빌드로 두 가지를 같이 본다:
+   - 로그인 (4-2). 시크릿의 API 키 오타를 고쳤으니 이제 되어야 한다.
+     안 되면 설정 화면의 `로그인 연결 진단` 버튼으로 어느 단계에서 막히는지 볼 것.
+   - 7-1 리뉴얼 결과물 — 캐릭터 애니메이션, 스플래시, 노트 화면 모눈·손글씨.
+2. 로그인 되면 → 폰↔패드 동기화 테스트 (캐릭터도 같이 넘어가는지 확인)
+3. 알림 실기기 확인 (자정 알림 시각을 아침으로 옮길지 사용자와 상의 — 아래 9장)
+4. 여유가 되면 `build-apk.yml` 문구 교체 (`workflow` 스코프 필요, 7-1 참고)
 
 ## 7. 작업 방식 메모
 
@@ -312,10 +320,12 @@ npx expo start --web --port 8081
 - 사용자는 화면을 보면서 수정을 요청하는 방식으로 일한다. 실기기 확인은 사용자 몫.
 - 확인은 웹 미리보기(즉시) → APK(42분) 순서로. APK는 여러 변경을 모아서 한 번에.
 
-## 7-1. 진행 중 — HANDOFF "단짝" 리뉴얼 (2026-08-05 시작, 미완)
+## 7-1. HANDOFF "단짝" 리뉴얼 (2026-08-05 — 코드 작업 완료, 실기기 미검증)
 
 원본 스펙과 자료는 **저장소 안에 넣어뒀다**: `handoff/`
 - `handoff/HANDOFF.md` — 확정 스펙 (이게 기준 문서다. 작업 전 반드시 정독)
+- `handoff/HANDOFF-addendum-care-guide.md` — 설정 화면 "강아지 키우기 안내" 추가 스펙
+  (원본이 mojibake 로 전달돼서 복원 후 사용자 확인을 거쳐 UTF-8 로 다시 적어둔 것)
 - `handoff/reference/web-prototype.dc.html` — 확정된 동작이 담긴 웹 프로토타입
 - `handoff/assets-original/` — 전처리 전 원본 이미지 26개
 - `handoff/prep-assets.ps1` — 아래 전처리를 수행한 스크립트
@@ -343,21 +353,44 @@ npx expo start --web --port 8081
   단일 문서 `users/{uid}/state/character` 로 주고받는다. `updatedAt` 최신 승.
   `firestore.rules` 는 `{document=**}` 와일드카드라 **규칙 수정 불필요**(확인함).
 
-### 남은 것 (순서대로)
+### 2단계에서 끝낸 것 (1~10번 전부, 2026-08-05)
 
-1. `_layout.tsx` 에 Nanum Pen Script / Noto Sans KR 로드 + `theme.ts` 에 타이포 역할 추가
-   (노트 손글씨 3종, 로고)
-2. 단어장 생성 폼에 **언어 선택 칩**(`영어`/`한국어`) + 덱 상세 단어 추가 **placeholder 분기**
-   (HANDOFF §4.1-7, §4.2-3)
-3. **캐릭터 카드** 컴포넌트 (HANDOFF §5.4) — 덱 목록 상단, 동기화 바 아래
-4. **동작 애니메이션** (§5.5) — 6단계 이상은 프레임 4장 순환, 미만은 트랜스폼만
-5. **스플래시** (§5.6) — 앱 시작 2초 + 동기화 바 탭
-6. **노트 화면** 신규 라우트 `src/app/deck/[deckId]/note.tsx` (§7)
-7. 세션 저장 후 `awardDaily()` 호출 연결 (study/review/recall 3곳, §4.3·§4.4)
-8. 이름 변경: 앱 이름 `보카덱` → **`단짝`**, `리콜` → **`단어 매치`** 전역 치환 (§3)
-9. §3 문구 교체 — 통계 빈 상태, 매치 부족 안내 (나머지 4곳은 이미 일치함)
-10. **GitHub 저장소 이름 변경**: `vocadeck` → `danjjak`
-    (GitHub 저장소명은 한글 불가라 로마자. `gh repo rename danjjak` 후 `git remote set-url`)
+1. **폰트 로드** (`1c1938c`) — `_layout.tsx` 에 Nanum Pen Script / Noto Sans KR 추가,
+   `theme.ts` 에 `noteNumber`/`noteTerm`/`noteMeaning`/`logoLarge`/`logoSmall` 역할 추가.
+2. **언어 선택 칩** (`256dce4`) — `addDeck(name, lang)`, 생성 폼에 `영어`/`한국어` 칩,
+   단어는 덱 언어를 상속, 단어 추가 placeholder 가 언어별로 갈린다.
+   생성 폼은 스펙대로 1px `line` 테두리의 세로 배치로 바꿨다.
+3. **캐릭터 카드** (`7898ad4`) — `src/components/character/character-card.tsx`.
+   이름 인라인 편집, 성장 진행 바, 밥/물 게이지, 장난감 상점 6종, 강아지 수.
+4. **동작 애니메이션** (`7898ad4`) — `src/hooks/use-dog-motion.ts`.
+   §5.5 키프레임을 `interpolate` 로 그대로 옮겼다. `transformOrigin: '50% 90%'`.
+5. **스플래시** (`5ef88b1`) — `splash-overlay.tsx` + `splash-store.ts`.
+   `_layout` 에 마운트해 앱 시작 시, 동기화 바 탭 시 2초간 뜬다.
+6. **노트 화면** (`55dee82`) — `src/app/deck/[deckId]/note.tsx`. 덱 상세 헤더에 `노트` 버튼 추가.
+7. **awardDaily 연결** (`5ef88b1`) — study / review(매일 복습) / recall 세 화면.
+   매일 복습은 덱별로 세션이 여러 건 저장돼도 지급은 1회다.
+8. **이름 변경** (`b991f9d`) — `단짝`, `단어 매치`. `app.json` 은 `name` 만 바꿨다.
+9. **문구 교체** (`b991f9d`) — 통계 빈 상태, 매치 부족 안내.
+10. **저장소 이름 변경** — `seopchang/vocadeck` → **`seopchang/danjjak`**.
+
+추가로 **설정 화면 "강아지 키우기 안내"** 접이식 섹션 (`8f335ef`, 추가 핸드오프 스펙).
+
+### 이 작업에서 확인된 것
+
+- **`app.json` 의 `package`/`slug`/`scheme` 은 바꾸지 않았다.** 안드로이드 `package` 를 바꾸면
+  기존 설치본을 업그레이드하지 못하고 데이터가 끊긴다. 표시 이름(`name`)만 `단짝` 으로 바꿨다.
+- HANDOFF §5.2 의 `newStage >= 4` 가 0-based 인지 애매했는데, 추가 핸드오프의
+  "4단계 이상 성장하면…" 문장으로 **1-based 4단계(= 인덱스 3)** 가 맞다고 확인됐다.
+  `character-store.ts` 의 기존 `newStage >= 3` 구현이 맞다.
+
+### 아직 안 한 것
+
+- ⚠️ **`.github/workflows/build-apk.yml` 문구 교체.** 릴리스 이름이 아직 `보카덱 APK (최신)` 이고
+  APK 파일명도 `vocadeck.apk` 다. 워크플로 파일은 토큰에 **`workflow` 스코프**가 있어야 푸시된다
+  (`gh auth refresh -h github.com -s workflow`, 디바이스 코드 재입력 필요).
+  기능에는 영향이 없다 — 릴리스 표시 이름과 파일명뿐이다.
+- ⚠️ **실기기 미검증.** 웹 번들은 통과했고 `tsc` 도 통과하지만, 아래는 APK 로만 확인된다:
+  캐릭터 애니메이션 실제 프레임 전환, 스플래시 타이밍, 노트 화면 모눈 렌더링, 손글씨 폰트 폴백.
 
 ### 폰트 관련 주의 — HANDOFF 와 의도적으로 다르게 간다
 

@@ -9,56 +9,66 @@ $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";"
 
 그다음:
 1. gh auth login --web 으로 디바이스 코드 알려줘. 내가 브라우저에 입력할게.
-2. gh repo clone seopchang/vocadeck 하고 npm install
-   (저장소 이름을 바꿨으면 그걸로 클론해)
+   인증되면 gh auth setup-git 도 꼭 실행해 (안 하면 push가 막혀).
+2. gh repo clone seopchang/danjjak 하고 npm install
+   (저장소 이름이 vocadeck에서 danjjak으로 바뀌었어)
 3. git config user.name "seopchang" / user.email "yunseobchang123@gmail.com"
 3-1. PROGRESS.md 0장의 ".env 재생성"에 값 6개가 적혀 있어. 그대로 복사해서 .env 만들어줘.
      (타이핑하지 말고 복사할 것 — API 키 9번째 글자가 소문자 l인데 대문자 I로 잘못 넣어서
       예전에 로그인이 오래 막혔던 적 있어)
-4. PROGRESS.md 전체 읽어. 특히 0장(환경), 7-1장(지금 하던 작업), 8장(디자인 시스템).
-5. handoff/HANDOFF.md 전체 읽어. 이게 지금 적용 중인 기준 스펙이야.
+4. PROGRESS.md 전체 읽어. 특히 0장(환경), 7-1장(리뉴얼 결과), 8장(디자인 시스템).
+5. handoff/HANDOFF.md 와 handoff/HANDOFF-addendum-care-guide.md 읽어. 이게 기준 스펙이야.
    handoff/reference/web-prototype.dc.html 은 확정된 동작이 담긴 웹 프로토타입이고.
 
 ## 지금 상황
 
-앱을 "보카덱"에서 "단짝"으로 전면 리뉴얼하는 중이야. HANDOFF.md 스펙을 적용하고 있고,
-1단계(에셋 26개 전처리·배치, 데이터 모델, 캐릭터 스토어, Firebase 동기화 확장)까지 끝나서
-커밋 b3b9709로 푸시돼 있어. tsc는 통과 상태야.
+"보카덱" → "단짝" 전면 리뉴얼의 **코드 작업은 전부 끝났어.** HANDOFF 1~10번과
+추가 핸드오프(설정 화면 "강아지 키우기 안내")까지 반영돼서 푸시된 상태야.
+tsc 통과, 웹 번들 통과. 저장소 이름도 danjjak으로 바꿨어.
 
-남은 건 PROGRESS.md 7-1장 "남은 것"에 1~10번으로 순서대로 적혀 있어. 그거 이어서 해줘.
-요약하면: 폰트 로드 → 언어 선택 칩 → 캐릭터 카드 → 동작 애니메이션 → 스플래시 →
-노트 화면 → awardDaily 연결 → 이름 변경(단짝/매치) → 문구 교체 → 저장소 이름 변경.
+**이번 세션에 할 일은 실기기 검증이야.**
+
+APK를 빌드해서 폰에서 두 가지를 한 번에 확인해줘:
+1. **로그인이 되는지** — 지지난 세션에 GitHub Secret의 API 키 오타(소문자 l ↔ 대문자 I)를
+   고쳤는데 아직 APK로 확인을 못 했어. 안 되면 설정 화면의 "로그인 연결 진단" 버튼을
+   눌러서 나온 내용 알려줄게.
+2. **리뉴얼 결과물** — 캐릭터 카드 애니메이션(강아지 탭/밥·물/장난감), 스플래시(앱 시작 2초),
+   노트 화면(모눈 배경 + 손글씨), 단어장 만들 때 영어/한국어 칩, 설정 화면 접이식 안내.
+
+로그인이 되면 폰↔패드 동기화도 테스트해줘 (캐릭터도 같이 넘어가는지).
+
+## 남아 있는 자잘한 것
+
+- `.github/workflows/build-apk.yml`에 아직 "보카덱 APK (최신)" 문구와 vocadeck.apk 파일명이 남아 있어.
+  이 파일은 토큰에 workflow 스코프가 있어야 푸시돼: gh auth refresh -h github.com -s workflow
+  (디바이스 코드 재입력 필요). 기능엔 영향 없고 릴리스 표시 이름·파일명뿐이야.
+- 자정(00:00) 복습 알림 시각을 아침으로 옮길지 정해야 해 (PROGRESS 9장).
 
 ## 꼭 지킬 것
 
 - **폰트**: HANDOFF는 한글 자리에도 Space Grotesk를 지정하는데 그건 따르지 마.
   Space Grotesk에 한글 글리프가 없어서 안드로이드 폴백이 깨지는 문제를 이미 겪고
-  Pretendard로 바꾼 상태야 (PROGRESS 7-1장 맨 아래, 8장 참고).
+  Pretendard로 바꾼 상태야 (PROGRESS 7-1장, 8장 참고).
   한글 들어가는 자리 = Pretendard, 라틴 전용(term) = Space Grotesk,
   노트 손글씨 = Nanum Pen Script, 로고 = Noto Sans KR. 뒤 둘은 한글 글리프 있어서 스펙대로 OK.
-- **새로 만드는 데이터는 전부 Firebase에도 저장되게** 해줘. 캐릭터는 이미
-  users/{uid}/state/character 로 동기화 붙여놨어.
+- **app.json의 package / slug / scheme은 건드리지 마.** 바꾸면 안드로이드가 다른 앱으로 봐서
+  기존 설치본을 업그레이드 못 하고 데이터가 끊겨. 표시 이름(name)만 "단짝"으로 바꿔놨어.
+- **새로 만드는 데이터는 전부 Firebase에도 저장되게** 해줘.
 - 커밋 메시지에 한글 넣을 땐 파일로 써서 git commit -F 로 해 (PowerShell 인코딩 깨짐).
+  이때 Out-File -Encoding utf8은 BOM을 붙이니까 PROGRESS 0장에 적어둔
+  [System.IO.File]::WriteAllText(..., UTF8Encoding($false)) 방식을 써.
 - 코드 고칠 때마다 알아서 git add/commit/push 해줘.
 - 개발 서버 켜면 expo-env.d.ts가 CRLF로 다시 써지는데, 내용 변화 없으면
   git checkout -- 로 되돌리고 커밋하지 마.
+- 확인 질문은 너무 자주 하지 말고 관련 작업은 한 번에 묶어서 진행해줘.
 
 ## 작업 방식
 
 - Expo Go는 안 써. 디자인 확인은 웹 미리보기로: npx expo start --web --port 8081
   → 브라우저에서 http://localhost:8081
-  (.env는 위 3-1에서 만들어. 서버 시작 시점에만 읽히니까 .env 만든 뒤에 서버 띄워야 해)
+  (.env는 서버 시작 시점에만 읽히니까 .env 만든 뒤에 서버 띄워야 해)
 - 최종 확인은 APK 빌드: gh workflow run build-apk.yml — 42분 걸림. 변경 모아서 한 번에.
 - 내가 "작업 종료"라고 하면 gh auth logout 하고 실행 중인 프로세스 정리해줘.
-
-## 참고: 지난 세션에 해결한 것
-
-폰에서 로그인이 안 되던 문제 원인 확정했어. GitHub Secret의
-EXPO_PUBLIC_FIREBASE_API_KEY에 소문자 l이 대문자 I로 들어가 있었어(눈으로 구분 안 되는 오타).
-웹은 로컬 .env를 써서 됐고 APK만 틀린 키를 들고 있었던 거야. 시크릿은 교체 완료했고,
-**다음 APK 빌드에서 로그인이 되는지 확인이 필요해.** 안 되면 설정 화면에
-"로그인 연결 진단" 버튼 넣어놨으니까 그거 눌러서 나온 내용 알려줄게.
-자세한 건 PROGRESS.md 4-2장에 다 적혀 있어.
 
 ## 토큰 관리
 
