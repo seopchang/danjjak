@@ -117,18 +117,32 @@ export default function DeckDetailScreen() {
         <ThemedText type="screenTitle" style={styles.title} numberOfLines={1}>
           {deck.name}
         </ThemedText>
-        <Pressable
-          style={styles.headerAction}
-          onPress={() => router.push(`/deck/${deckId}/stats`)}>
-          <Image
-            source={require('../../../../assets/illustrations/icon-stats.png')}
-            style={styles.headerIcon}
-            resizeMode="contain"
-          />
-          <ThemedText type="labelKo" themeColor="textSecondary" style={styles.headerActionLabel}>
-            통계
-          </ThemedText>
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable
+            style={styles.headerAction}
+            onPress={() => router.push(`/deck/${deckId}/note`)}>
+            <Image
+              source={require('../../../../assets/illustrations/icon-note.png')}
+              style={styles.headerIcon}
+              resizeMode="contain"
+            />
+            <ThemedText type="labelKo" themeColor="textSecondary" style={styles.headerActionLabel}>
+              노트
+            </ThemedText>
+          </Pressable>
+          <Pressable
+            style={styles.headerAction}
+            onPress={() => router.push(`/deck/${deckId}/stats`)}>
+            <Image
+              source={require('../../../../assets/illustrations/icon-stats.png')}
+              style={styles.headerIcon}
+              resizeMode="contain"
+            />
+            <ThemedText type="labelKo" themeColor="textSecondary" style={styles.headerActionLabel}>
+              통계
+            </ThemedText>
+          </Pressable>
+        </View>
       </View>
 
       <View style={styles.studyBlock}>
@@ -319,6 +333,11 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     width: 24,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   headerAction: {
     flexDirection: 'row',
