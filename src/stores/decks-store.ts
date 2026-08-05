@@ -2,12 +2,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
-import { Deck } from '@/types';
+import { Deck, DeckLang } from '@/types';
 import { generateId } from '@/utils/id';
 
 interface DecksState {
   decks: Deck[];
-  addDeck: (name: string) => Deck;
+  addDeck: (name: string, lang?: DeckLang) => Deck;
   renameDeck: (id: string, name: string) => void;
   removeDeck: (id: string) => void;
   /** 동기화로 받아온 원격 덱을 로컬에 병합한다. */
@@ -23,11 +23,12 @@ export const useDecksStore = create<DecksState>()(
   persist(
     (set) => ({
       decks: [],
-      addDeck: (name) => {
+      addDeck: (name, lang = 'en') => {
         const now = new Date().toISOString();
         const deck: Deck = {
           id: generateId(),
           name: name.trim(),
+          lang,
           createdAt: now,
           updatedAt: now,
           deletedAt: null,

@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert, Image, Pressable, StyleSheet, View } from 'react-native';
 
+import { Chip } from '@/components/common/chip';
 import { Screen } from '@/components/common/screen';
 import { TextField } from '@/components/common/text-field';
 import { SyncBar } from '@/components/sync-bar';
@@ -10,6 +11,7 @@ import { Border, Colors } from '@/constants/theme';
 import { useDecksStore, visibleDecks } from '@/stores/decks-store';
 import { useSessionsStore } from '@/stores/sessions-store';
 import { deckWords, useWordsStore } from '@/stores/words-store';
+import { DeckLang } from '@/types';
 import { buildDailyReviewQueue } from '@/utils/review-queue';
 
 const theme = Colors.light;
@@ -23,6 +25,7 @@ export default function DeckListScreen() {
   const removeSessionsOfDeck = useSessionsStore((s) => s.removeSessionsOfDeck);
 
   const [newName, setNewName] = useState('');
+  const [newLang, setNewLang] = useState<DeckLang>('en');
   const [adding, setAdding] = useState(false);
 
   const list = useMemo(() => {
@@ -52,8 +55,9 @@ export default function DeckListScreen() {
   const handleAdd = () => {
     const name = newName.trim();
     if (!name) return;
-    addDeck(name);
+    addDeck(name, newLang);
     setNewName('');
+    setNewLang('en');
     setAdding(false);
   };
 
@@ -164,16 +168,22 @@ export default function DeckListScreen() {
             onSubmitEditing={handleAdd}
             returnKeyType="done"
             autoFocus
-            style={styles.addInput}
           />
-          <Pressable
-            onPress={handleAdd}
-            disabled={!newName.trim()}
-            style={[styles.addSubmit, !newName.trim() && styles.disabled]}>
-            <ThemedText type="button" style={{ color: theme.onInk }}>
-              추가
-            </ThemedText>
-          </Pressable>
+          {/* 생성 후에는 언어를 바꾸는 UI가 없다 (HANDOFF §6). */}
+          <View style={styles.langRow}>
+            <Chip label="영어" selected={newLang === 'en'} onPress={() => setNewLang('en')} />
+            <Chip label="한국어" selected={newLang === 'ko'} onPress={() => setNewLang('ko')} />
+          </View>
+          <View style={styles.addSubmitRow}>
+            <Pressable
+              onPress={handleAdd}
+              disabled={!newName.trim()}
+              style={[styles.addSubmit, !newName.trim() && styles.disabled]}>
+              <ThemedText type="button" style={{ color: theme.onInk }}>
+                추가
+              </ThemedText>
+            </Pressable>
+          </View>
         </View>
       ) : null}
 
@@ -343,21 +353,24 @@ const styles = StyleSheet.create({
   },
 
   addBox: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    borderWidth: Border.strong,
-    borderColor: theme.ink,
+    borderWidth: Border.hair,
+    borderColor: theme.line,
     borderRadius: 0,
+    padding: 16,
+    gap: 14,
     marginBottom: 12,
   },
-  addInput: {
-    flex: 1,
-    borderBottomWidth: 0,
-    paddingHorizontal: 14,
+  langRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  addSubmitRow: {
+    alignItems: 'flex-end',
   },
   addSubmit: {
     backgroundColor: theme.ink,
-    paddingHorizontal: 18,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { mergeById } from '@/stores/decks-store';
-import { Word, WordStatus } from '@/types';
+import { DeckLang, Word, WordStatus } from '@/types';
 import { generateId } from '@/utils/id';
 
 interface AddWordInput {
@@ -11,6 +11,8 @@ interface AddWordInput {
   term: string;
   meaning: string;
   tags: string[];
+  /** 덱의 언어를 그대로 상속한다. */
+  lang?: DeckLang;
 }
 
 interface WordsState {
@@ -42,6 +44,7 @@ export const useWordsStore = create<WordsState>()(
           term: input.term.trim(),
           meaning: input.meaning.trim(),
           tags: input.tags,
+          lang: input.lang ?? 'en',
           status: '미암기',
           isFavorite: false,
           registeredAt: now,

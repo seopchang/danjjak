@@ -6,7 +6,15 @@ import { Chip } from '@/components/common/chip';
 import { TextField } from '@/components/common/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { parseTags } from '@/components/vocab/word-list-row';
+import { useDecksStore } from '@/stores/decks-store';
 import { useWordsStore } from '@/stores/words-store';
+import { deckLang } from '@/types';
+
+/** 덱 언어별 입력 예시 (HANDOFF §4.2-3) */
+const PLACEHOLDERS = {
+  en: { term: '단어 (예: abandon)', meaning: '뜻 (예: 버리다, 포기하다)' },
+  ko: { term: '단어 (예: 사과)', meaning: '뜻 (예: 열매, 과일)' },
+} as const;
 
 interface WordRegisterFormProps {
   deckId: string;
@@ -16,6 +24,8 @@ interface WordRegisterFormProps {
 
 export function WordRegisterForm({ deckId, knownTags }: WordRegisterFormProps) {
   const addWord = useWordsStore((s) => s.addWord);
+  const lang = useDecksStore((s) => deckLang(s.decks.find((d) => d.id === deckId)));
+  const placeholder = PLACEHOLDERS[lang];
 
   const [term, setTerm] = useState('');
   const [meaning, setMeaning] = useState('');
@@ -36,6 +46,7 @@ export function WordRegisterForm({ deckId, knownTags }: WordRegisterFormProps) {
       term,
       meaning,
       tags: [...new Set([...tags, ...typed])],
+      lang,
     });
     setTerm('');
     setMeaning('');
@@ -49,11 +60,11 @@ export function WordRegisterForm({ deckId, knownTags }: WordRegisterFormProps) {
       <TextField
         value={term}
         onChangeText={setTerm}
-        placeholder="단어 (예: abandon)"
+        placeholder={placeholder.term}
         autoCapitalize="none"
         autoCorrect={false}
       />
-      <TextField value={meaning} onChangeText={setMeaning} placeholder="뜻 (예: 버리다, 포기하다)" />
+      <TextField value={meaning} onChangeText={setMeaning} placeholder={placeholder.meaning} />
 
       {knownTags.length > 0 ? (
         <View style={styles.tagRow}>
