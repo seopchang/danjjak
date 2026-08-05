@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Image, Pressable, StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/common/button';
 import { Screen } from '@/components/common/screen';
@@ -22,6 +22,33 @@ import { useSyncStore } from '@/stores/sync-store';
 import { DAILY_REVIEW_LIMIT } from '@/utils/review-queue';
 
 const theme = Colors.light;
+
+/**
+ * 강아지 키우기 안내 (추가 핸드오프).
+ * 아이콘은 성장 단계 이미지를 그대로 재사용한다.
+ */
+const CARE_GUIDE = [
+  {
+    image: require('../../assets/illustrations/dog-stage-4.png'),
+    title: '포인트로 자라요',
+    body: '매일 암기·복습·단어 매치 중 하나만 완료해도 그날 +10P, +5C를 받아요. 하루에 한 번만 지급되고, 포인트가 쌓이면 8단계에 걸쳐 새끼 강아지에서 든든한 리트리버까지 자라요.',
+  },
+  {
+    image: require('../../assets/illustrations/toy-bone.png'),
+    title: '코인으로 돌봐요',
+    body: '코인으로 밥·물을 주거나(각 1코인) 장난감을 살 수 있어요. 며칠 쉬면 밥·물 게이지가 서서히 줄어드니 자주 들여다봐 주세요.',
+  },
+  {
+    image: require('../../assets/illustrations/dog-stage-6.png'),
+    title: '청년이 되면 춤도 춰요',
+    body: '6단계(청년 리트리버)부터는 쓰다듬거나 돌봐줄 때 여러 동작을 보여줘요. 4단계 이상 성장하면 강아지가 새 친구를 데려오기도 해요.',
+  },
+  {
+    image: require('../../assets/illustrations/dog-stage-1.png'),
+    title: '이름도 지어주세요',
+    body: '캐릭터 카드에서 이름을 눌러 나만의 강아지 이름을 지어줄 수 있어요.',
+  },
+];
 
 /** "00:00" 같은 표기 */
 function formatReminderTime(): string {
@@ -52,6 +79,7 @@ export default function SettingsScreen() {
   const [reminderBusy, setReminderBusy] = useState(false);
   const [diagnostics, setDiagnostics] = useState<DiagnosticLine[] | null>(null);
   const [diagnosticsBusy, setDiagnosticsBusy] = useState(false);
+  const [careOpen, setCareOpen] = useState(false);
 
   const handleRunDiagnostics = async () => {
     setDiagnosticsBusy(true);
@@ -253,7 +281,7 @@ export default function SettingsScreen() {
         </ThemedText>
       </View>
 
-      <View style={styles.lastSection}>
+      <View style={styles.section}>
         <ThemedText type="sectionHeading">동기화 방식</ThemedText>
         <ThemedText type="body" themeColor="textSecondary">
           이 앱은 항상 기기 안에 먼저 저장합니다. 인터넷이 없어도 단어 등록과 학습이 그대로
@@ -262,6 +290,31 @@ export default function SettingsScreen() {
         <ThemedText type="body" themeColor="textSecondary">
           같은 단어를 두 기기에서 각각 고쳤다면 나중에 고친 쪽이 남습니다.
         </ThemedText>
+      </View>
+
+      <View style={styles.lastSection}>
+        <Pressable style={styles.careHead} onPress={() => setCareOpen((v) => !v)}>
+          <ThemedText type="sectionHeading">강아지 키우기 안내</ThemedText>
+          <ThemedText type="screenTitle" themeColor="textSecondary" style={styles.careGlyph}>
+            {careOpen ? '▲' : '▼'}
+          </ThemedText>
+        </Pressable>
+
+        {careOpen ? (
+          <View style={styles.careList}>
+            {CARE_GUIDE.map((item) => (
+              <View key={item.title} style={styles.careItem}>
+                <Image source={item.image} style={styles.careIcon} resizeMode="contain" />
+                <View style={styles.careText}>
+                  <ThemedText type="bodyBold">{item.title}</ThemedText>
+                  <ThemedText type="caption" themeColor="textSecondary">
+                    {item.body}
+                  </ThemedText>
+                </View>
+              </View>
+            ))}
+          </View>
+        ) : null}
       </View>
     </Screen>
   );
@@ -315,5 +368,30 @@ const styles = StyleSheet.create({
   },
   diagnosticsRow: {
     gap: 2,
+  },
+  careHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  careGlyph: {
+    fontSize: 18,
+  },
+  careList: {
+    gap: 20,
+    marginTop: 4,
+  },
+  careItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 14,
+  },
+  careIcon: {
+    width: 56,
+    height: 56,
+  },
+  careText: {
+    flex: 1,
+    gap: 4,
   },
 });
