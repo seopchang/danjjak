@@ -35,6 +35,15 @@ export function isFirebaseConfigured(): boolean {
   return Boolean(firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.appId);
 }
 
+/**
+ * APK는 CI가 GitHub Secrets로 .env를 만들어 넣기 때문에, 값에 공백이나 줄바꿈이
+ * 섞여 들어와도 빌드는 성공하고 앱만 조용히 실패한다. 그 경우를 폰 화면에서
+ * 눈으로 확인하려고 노출한다. (웹 SDK config는 비밀값이 아니다 — 위 주석 참고)
+ */
+export function getFirebaseConfigSnapshot(): Readonly<Record<string, string>> {
+  return { ...firebaseConfig };
+}
+
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
 let db: Firestore | null = null;

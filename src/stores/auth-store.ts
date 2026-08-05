@@ -22,6 +22,11 @@ interface AuthState {
    * 폰에서도 원인을 읽을 수 있게 한다.
    */
   errorCode: string | null;
+  /**
+   * 원본 예외 메시지. network-request-failed 는 fetch가 던진 예외를 전부
+   * 하나로 뭉뚱그린 코드라, 실제 사유는 이 메시지에만 남는다.
+   */
+  errorDetail: string | null;
   busy: boolean;
   init: () => void;
   signIn: (email: string, password: string) => Promise<boolean>;
@@ -61,6 +66,14 @@ function errorCodeOf(e: unknown): string {
   return 'unknown';
 }
 
+function errorDetailOf(e: unknown): string {
+  if (e instanceof Error) return `${e.name}: ${e.message}`;
+  if (typeof e === 'object' && e !== null && 'message' in e) {
+    return String((e as { message: unknown }).message);
+  }
+  return String(e);
+}
+
 /**
  * 사용자에게는 다듬은 한국어만 보여주지만, 그러면 원인 파악이 막힌다.
  * (특히 network-request-failed 는 인터넷 문제 말고도 SSL·설정 문제로도 뜬다)
@@ -80,6 +93,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
   email: null,
   error: null,
   errorCode: null,
+  errorDetail: null,
   busy: false,
 
   init: () => {
@@ -99,7 +113,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
   },
 
   signIn: async (email, password) => {
-    set({ busy: true, error: null, errorCode: null });
+    set({ busy: true, error: null, errorCode: null, errorDetail: null });
     try {
       await signInWithEmailAndPassword(getFirebaseAuth(), email.trim(), password);
       set({ busy: false });
@@ -107,13 +121,18 @@ export const useAuthStore = create<AuthState>()((set) => ({
     } catch (e) {
       logAuthError('로그인', e);
       const code = errorCodeOf(e);
-      set({ busy: false, error: toKoreanMessage(code), errorCode: code });
+      set({
+        busy: false,
+        error: toKoreanMessage(code),
+        errorCode: code,
+        errorDetail: errorDetailOf(e),
+      });
       return false;
     }
   },
 
   signUp: async (email, password) => {
-    set({ busy: true, error: null, errorCode: null });
+    set({ busy: true, error: null, errorCode: null, errorDetail: null });
     try {
       await createUserWithEmailAndPassword(getFirebaseAuth(), email.trim(), password);
       set({ busy: false });
@@ -121,7 +140,12 @@ export const useAuthStore = create<AuthState>()((set) => ({
     } catch (e) {
       logAuthError('계정 만들기', e);
       const code = errorCodeOf(e);
-      set({ busy: false, error: toKoreanMessage(code), errorCode: code });
+      set({
+        busy: false,
+        error: toKoreanMessage(code),
+        errorCode: code,
+        errorDetail: errorDetailOf(e),
+      });
       return false;
     }
   },
@@ -131,5 +155,5 @@ export const useAuthStore = create<AuthState>()((set) => ({
     await signOut(getFirebaseAuth());
   },
 
-  clearError: () => set({ error: null, errorCode: null }),
+  clearError: () => set({ error: null, errorCode: null, errorDetail: null }),
 }));

@@ -8,6 +8,7 @@ import { SquareSwitch } from '@/components/common/square-switch';
 import { TextField } from '@/components/common/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { Border, Colors } from '@/constants/theme';
+import { DiagnosticLine, runLoginDiagnostics } from '@/lib/diagnostics';
 import { isFirebaseConfigured } from '@/lib/firebase';
 import {
   cancelDailyReviewReminder,
@@ -35,6 +36,7 @@ export default function SettingsScreen() {
   const busy = useAuthStore((s) => s.busy);
   const error = useAuthStore((s) => s.error);
   const errorCode = useAuthStore((s) => s.errorCode);
+  const errorDetail = useAuthStore((s) => s.errorDetail);
   const signIn = useAuthStore((s) => s.signIn);
   const signUp = useAuthStore((s) => s.signUp);
   const logOut = useAuthStore((s) => s.logOut);
@@ -48,6 +50,17 @@ export default function SettingsScreen() {
   const [inputEmail, setInputEmail] = useState('');
   const [password, setPassword] = useState('');
   const [reminderBusy, setReminderBusy] = useState(false);
+  const [diagnostics, setDiagnostics] = useState<DiagnosticLine[] | null>(null);
+  const [diagnosticsBusy, setDiagnosticsBusy] = useState(false);
+
+  const handleRunDiagnostics = async () => {
+    setDiagnosticsBusy(true);
+    try {
+      setDiagnostics(await runLoginDiagnostics());
+    } finally {
+      setDiagnosticsBusy(false);
+    }
+  };
 
   const handleToggleReminder = async (next: boolean) => {
     setReminderBusy(true);
@@ -166,8 +179,13 @@ export default function SettingsScreen() {
               </ThemedText>
               {/* 릴리스 APK 에서는 콘솔을 볼 수 없어 원인 코드를 여기 같이 띄운다 */}
               {errorCode ? (
-                <ThemedText type="meta" themeColor="textTertiary">
+                <ThemedText type="meta" themeColor="textSecondary" selectable>
                   {errorCode}
+                </ThemedText>
+              ) : null}
+              {errorDetail ? (
+                <ThemedText type="meta" themeColor="textTertiary" selectable>
+                  {errorDetail}
                 </ThemedText>
               ) : null}
             </View>
@@ -186,6 +204,32 @@ export default function SettingsScreen() {
               clearError();
             }}
           />
+
+          <Button
+            label={diagnosticsBusy ? '진단 중…' : '로그인 연결 진단'}
+            variant="outline"
+            onPress={handleRunDiagnostics}
+            disabled={diagnosticsBusy}
+          />
+          <ThemedText type="caption" themeColor="textSecondary">
+            로그인이 안 될 때 눌러주세요. 설정값과 네트워크를 단계별로 확인해 어디서 막히는지
+            보여줍니다.
+          </ThemedText>
+
+          {diagnostics ? (
+            <View style={styles.diagnosticsBox}>
+              {diagnostics.map((line) => (
+                <View key={line.label} style={styles.diagnosticsRow}>
+                  <ThemedText type="metaSemi" themeColor={line.ok === false ? 'ink' : 'textSecondary'}>
+                    {line.ok === false ? '✕' : line.ok === true ? '✓' : '·'} {line.label}
+                  </ThemedText>
+                  <ThemedText type="meta" themeColor="textTertiary" selectable>
+                    {line.detail}
+                  </ThemedText>
+                </View>
+              ))}
+            </View>
+          ) : null}
         </View>
       )}
 
@@ -261,6 +305,15 @@ const styles = StyleSheet.create({
     borderLeftColor: theme.inkMuted,
     paddingLeft: 12,
     paddingVertical: 2,
+    gap: 2,
+  },
+  diagnosticsBox: {
+    borderWidth: Border.hair,
+    borderColor: theme.line,
+    padding: 12,
+    gap: 10,
+  },
+  diagnosticsRow: {
     gap: 2,
   },
 });
