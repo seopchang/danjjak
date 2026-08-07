@@ -40,12 +40,17 @@ function describeThrown(e: unknown): string {
   return String(e);
 }
 
-/** 값에 눈에 안 보이는 공백/줄바꿈이 섞였는지 (CI 시크릿 오염 탐지) */
-function whitespaceNote(value: string): string {
-  if (value.length === 0) return ' ← 비어 있음';
-  if (value !== value.trim()) return ' ← 앞뒤 공백/줄바꿈 있음';
-  if (/\s/.test(value)) return ' ← 중간에 공백 있음';
-  return '';
+/**
+ * 값에 눈에 안 보이는 공백/줄바꿈이 섞였는지 (CI 시크릿 오염 탐지).
+ *
+ * 앞뒤 공백은 firebase.ts 가 자동으로 다듬어 쓰므로 더 이상 로그인을 막지 않는다.
+ * 그래도 시크릿이 더러워졌다는 사실은 보여줘야 고칠 수 있어 안내로 남긴다.
+ */
+function whitespaceNote(value: string): { note: string; ok: boolean | null } {
+  if (value.length === 0) return { note: ' ← 비어 있음', ok: false };
+  if (value !== value.trim()) return { note: ' ← 앞뒤 공백/줄바꿈 (자동 제거됨)', ok: null };
+  if (/\s/.test(value)) return { note: ' ← 중간에 공백 있음', ok: false };
+  return { note: '', ok: true };
 }
 
 function maskApiKey(value: string): string {
@@ -58,11 +63,11 @@ function maskApiKey(value: string): string {
 function configLines(): DiagnosticLine[] {
   const config = getFirebaseConfigSnapshot();
   return Object.entries(config).map(([key, value]) => {
-    const note = whitespaceNote(value);
+    const { note, ok } = whitespaceNote(value);
     return {
       label: key,
-      detail: (key === 'apiKey' ? maskApiKey(value) : value || '(비어 있음)') + note,
-      ok: note === '',
+      detail: (key === 'apiKey' ? maskApiKey(value) : value.trim() || '(비어 있음)') + note,
+      ok,
     };
   });
 }
