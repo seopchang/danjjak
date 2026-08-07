@@ -59,7 +59,7 @@ export default function RecallModeScreen() {
   const allWords = useWordsStore((s) => s.words);
   const markStatus = useWordsStore((s) => s.markStatus);
   const addSession = useSessionsStore((s) => s.addSession);
-  const awardDaily = useCharacterStore((s) => s.awardDaily);
+  const addCoin = useCharacterStore((s) => s.addCoin);
 
   const [direction, setDirection] = useState<RecallDirection>('meaningToTerm');
   const [round, setRound] = useState(0);
@@ -99,8 +99,6 @@ export default function RecallModeScreen() {
         durationSeconds: Math.round((Date.now() - startedAt.current) / 1000),
         scopeLabel: `단어 매치${favorites === '1' ? ' (즐겨찾기)' : ''}`,
       });
-      // 하루 1회만 실제로 지급된다 (§5.2).
-      awardDaily();
     }
     setFinished(true);
   };
@@ -120,6 +118,8 @@ export default function RecallModeScreen() {
     setPicked(choice);
     const isCorrect = choice === current.answer;
     markStatus(current.wordId, isCorrect ? '암기완료' : '미암기');
+    // 문제 하나를 풀 때마다 코인 1개. 하루 상한 없이 즉시 지급한다.
+    addCoin();
     const nextCorrect = correctCount + (isCorrect ? 1 : 0);
     const nextIncorrect = incorrectCount + (isCorrect ? 0 : 1);
     setCorrectCount(nextCorrect);

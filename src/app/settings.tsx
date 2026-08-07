@@ -24,29 +24,34 @@ import { DAILY_REVIEW_LIMIT } from '@/utils/review-queue';
 const theme = Colors.light;
 
 /**
- * 강아지 키우기 안내 (추가 핸드오프).
+ * 단짝이 키우기 안내서 (HANDOFF-character-update §6).
  * 아이콘은 성장 단계 이미지를 그대로 재사용한다.
  */
 const CARE_GUIDE = [
   {
-    image: require('../../assets/illustrations/dog-stage-4.png'),
-    title: '포인트로 자라요',
-    body: '매일 암기·복습·단어 매치 중 하나만 완료해도 그날 +10P, +5C를 받아요. 하루에 한 번만 지급되고, 포인트가 쌓이면 8단계에 걸쳐 새끼 강아지에서 든든한 리트리버까지 자라요.',
+    image: require('../../assets/illustrations/dog-stage-5.png'),
+    title: '단어 하나에 코인 하나',
+    body: '암기·복습·단어 매치에서 단어를 하나 볼 때마다 코인이 1개 쌓입니다. 하루 상한은 없습니다.',
   },
   {
-    image: require('../../assets/illustrations/toy-bone.png'),
-    title: '코인으로 돌봐요',
-    body: '코인으로 밥·물을 주거나(각 1코인) 장난감을 살 수 있어요. 며칠 쉬면 밥·물 게이지가 서서히 줄어드니 자주 들여다봐 주세요.',
+    image: require('../../assets/illustrations/dog-stage-3.png'),
+    title: '키우기는 직접 누릅니다',
+    body: '코인이 모이면 캐릭터 카드의 키우기 버튼이 켜집니다. 눌러야 다음 단계로 자라고, 그때 코인을 씁니다.',
   },
   {
-    image: require('../../assets/illustrations/dog-stage-6.png'),
-    title: '청년이 되면 춤도 춰요',
-    body: '6단계(청년 리트리버)부터는 쓰다듬거나 돌봐줄 때 여러 동작을 보여줘요. 4단계 이상 성장하면 강아지가 새 친구를 데려오기도 해요.',
+    image: require('../../assets/illustrations/dog-stage-8.png'),
+    title: '다 키우기까지 단어 600개',
+    body: '새끼 강아지부터 든든한 리트리버까지 여섯 단계입니다. 단계별 비용은 20 / 40 / 90 / 150 / 300코인입니다.',
+  },
+  {
+    image: require('../../assets/illustrations/dog-stage-7.png'),
+    title: '청소년부터는 춤도 춰요',
+    body: '5단계 청소년 리트리버부터는 쓰다듬거나 장난감을 줄 때 여러 동작을 보여줍니다. 4단계를 넘기면 새 식구를 데려오기도 합니다.',
   },
   {
     image: require('../../assets/illustrations/dog-stage-1.png'),
     title: '이름도 지어주세요',
-    body: '캐릭터 카드에서 이름을 눌러 나만의 강아지 이름을 지어줄 수 있어요.',
+    body: '캐릭터 카드에서 이름을 누르면 바꿀 수 있습니다. 변신 창에도 그 이름이 그대로 나옵니다.',
   },
 ];
 
@@ -294,7 +299,7 @@ export default function SettingsScreen() {
 
       <View style={styles.lastSection}>
         <Pressable style={styles.careHead} onPress={() => setCareOpen((v) => !v)}>
-          <ThemedText type="sectionHeading">강아지 키우기 안내</ThemedText>
+          <ThemedText type="sectionHeading">단짝이 키우기 안내서</ThemedText>
           <ThemedText type="screenTitle" themeColor="textSecondary" style={styles.careGlyph}>
             {careOpen ? '▲' : '▼'}
           </ThemedText>

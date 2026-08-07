@@ -24,7 +24,7 @@ const SCALE = [1, 1.04, 1.06, 1, 1.05, 1.02, 1];
 /**
  * 강아지 동작 애니메이션.
  *
- * 6단계(청년 리트리버)부터는 네 장의 프레임을 갈아끼우고, 그 아래 단계는
+ * 5단계(청소년 리트리버)부터는 네 장의 프레임을 갈아끼우고, 그 아래 단계는
  * 자기 단계 이미지에 튀는 트랜스폼만 준다.
  */
 export function useDogMotion(dance: DanceRequest, stageIndex: number, stageImage: number) {

@@ -2,17 +2,16 @@ import { useState } from 'react';
 import { Image, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
+import { TransformModal } from '@/components/character/transform-modal';
 import { ThemedText } from '@/components/themed-text';
 import { Border, Colors, Type } from '@/constants/theme';
 import { useDogMotion } from '@/hooks/use-dog-motion';
-import { STAGES, TOYS, useCharacterStore } from '@/stores/character-store';
+import { STAGES, TOYS, upgradeCost, useCharacterStore } from '@/stores/character-store';
 
 const theme = Colors.light;
 
-const FEED_COST = 1;
-
 /**
- * 성장 캐릭터 카드 (HANDOFF §5.4).
+ * 성장 캐릭터 카드 (HANDOFF §5.4 + HANDOFF-character-update §0·§2·§7).
  * 덱 목록 상단, 동기화 바 아래에 놓인다.
  */
 export function CharacterCard() {
@@ -20,35 +19,39 @@ export function CharacterCard() {
   const dance = useCharacterStore((s) => s.dance);
   const requestDance = useCharacterStore((s) => s.requestDance);
   const setName = useCharacterStore((s) => s.setName);
-  const feed = useCharacterStore((s) => s.feed);
-  const water = useCharacterStore((s) => s.water);
+  const growUp = useCharacterStore((s) => s.growUp);
   const buyToy = useCharacterStore((s) => s.buyToy);
 
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
+  // 변신 연출은 자란 직후의 before/after 를 붙잡아 둬야 해서 따로 담는다.
+  const [transform, setTransform] = useState<{ from: number; to: number } | null>(null);
 
   const stage = STAGES[character.stageIndex];
   const next = STAGES[character.stageIndex + 1];
+  const cost = upgradeCost(character.stageIndex);
   const { motionStyle, source } = useDogMotion(dance, character.stageIndex, stage.image);
 
-  const span = next ? next.min - stage.min : 0;
-  const gained = character.points - stage.min;
-  const growth = next && span > 0 ? Math.min(100, Math.max(0, (gained / span) * 100)) : 100;
+  const canGrow = cost != null && character.coins >= cost;
+  const remaining = cost != null ? Math.max(0, cost - character.coins) : 0;
+  const growth = cost != null && cost > 0 ? Math.min(100, (character.coins / cost) * 100) : 100;
 
   const commitName = () => {
     setName(nameDraft);
     setEditingName(false);
   };
 
+  const handleGrow = () => {
+    const from = character.stageIndex;
+    if (!growUp()) return;
+    setTransform({ from, to: from + 1 });
+  };
+
   return (
     <View style={styles.card}>
       <View style={styles.topRow}>
         <Pressable onPress={() => requestDance(2)}>
-          <Animated.Image
-            source={source}
-            style={[styles.dog, motionStyle]}
-            resizeMode="contain"
-          />
+          <Animated.Image source={source} style={[styles.dog, motionStyle]} resizeMode="contain" />
         </Pressable>
 
         <View style={styles.info}>
@@ -80,7 +83,7 @@ export function CharacterCard() {
               </Pressable>
             )}
             <ThemedText type="metaSemi" themeColor="textSecondary">
-              {character.points}P · {character.coins}C
+              코인 {character.coins}
             </ThemedText>
           </View>
 
@@ -94,46 +97,42 @@ export function CharacterCard() {
 
           <ThemedText type="caption" themeColor="textSecondary" style={styles.caption}>
             {next
-              ? `매일 학습하면 자라요 · 다음 단계까지 ${next.min - character.points}P`
-              : '최고 단계에 도달했어요.'}
+              ? `단어 하나에 코인 1개 · 다음 단계까지 코인 ${remaining}개`
+              : '함께 오래 지냈네요.'}
           </ThemedText>
         </View>
       </View>
 
-      <View style={styles.needRow}>
-        <NeedGauge
-          label="밥"
-          value={character.hunger}
-          disabled={character.coins < FEED_COST || character.hunger >= 100}
-          onPress={feed}
-        />
-        <NeedGauge
-          label="물"
-          value={character.thirst}
-          disabled={character.coins < FEED_COST || character.thirst >= 100}
-          onPress={water}
-        />
+      {/* 승급은 자동이 아니다. 사용자가 눌러야 자라고 그때 코인을 낸다. */}
+      <View style={styles.growBlock}>
+        <Pressable
+          onPress={handleGrow}
+          disabled={!canGrow}
+          style={[styles.growButton, !canGrow && styles.disabled]}>
+          <ThemedText type="button" style={{ color: theme.onInk }}>
+            {next ? `${next.name}로 키우기` : '최고 단계에 도달했어요'}
+          </ThemedText>
+        </Pressable>
+        {cost != null ? (
+          <ThemedText type="metaSemi" themeColor="textSecondary" style={styles.growCost}>
+            코인 {cost}
+          </ThemedText>
+        ) : null}
       </View>
 
+      {/* 장난감은 보유 개념이 없다. 누를 때마다 코인을 쓰고 한 번 반응한다. */}
       <View style={styles.shop}>
         {TOYS.map((toy) => {
-          const owned = character.toys.includes(toy.id);
           const affordable = character.coins >= toy.cost;
           return (
             <Pressable
               key={toy.id}
               onPress={() => buyToy(toy.id)}
-              disabled={owned || !affordable}
-              style={[
-                styles.toy,
-                owned && { backgroundColor: theme.ink },
-                !owned && !affordable && styles.disabled,
-              ]}>
+              disabled={!affordable}
+              style={[styles.toy, !affordable && styles.disabled]}>
               <Image source={toy.image} style={styles.toyIcon} resizeMode="contain" />
-              <ThemedText
-                type="metaSemi"
-                style={{ color: owned ? theme.onInk : theme.ink }}>
-                {owned ? '보유' : `${toy.cost}C`}
+              <ThemedText type="metaSemi" style={{ color: theme.ink }}>
+                코인 {toy.cost}
               </ThemedText>
             </Pressable>
           );
@@ -145,40 +144,14 @@ export function CharacterCard() {
           함께 자란 강아지 {character.puppies}마리
         </ThemedText>
       ) : null}
-    </View>
-  );
-}
 
-/** 밥/물 한 칸 — 라벨 + 주기 버튼 + 게이지 */
-function NeedGauge({
-  label,
-  value,
-  disabled,
-  onPress,
-}: {
-  label: string;
-  value: number;
-  disabled: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <View style={styles.need}>
-      <View style={styles.needHead}>
-        <ThemedText type="labelKo" themeColor="textSecondary" style={styles.needLabel}>
-          {label}
-        </ThemedText>
-        <Pressable onPress={onPress} disabled={disabled} hitSlop={6}>
-          <ThemedText
-            type="caption"
-            themeColor="textSecondary"
-            style={[styles.feedLink, disabled && styles.disabled]}>
-            주기 ({FEED_COST}C)
-          </ThemedText>
-        </Pressable>
-      </View>
-      <View style={styles.track}>
-        <View style={[styles.fill, { width: `${Math.max(0, Math.min(100, value))}%` }]} />
-      </View>
+      <TransformModal
+        visible={transform != null}
+        fromStage={transform?.from ?? 0}
+        toStage={transform?.to ?? 0}
+        name={character.name}
+        onClose={() => setTransform(null)}
+      />
     </View>
   );
 }
@@ -244,26 +217,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
 
-  needRow: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  need: {
-    flex: 1,
+  growBlock: {
     gap: 6,
   },
-  needHead: {
-    flexDirection: 'row',
+  growButton: {
+    backgroundColor: theme.ink,
+    borderRadius: 0,
+    paddingVertical: 12,
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
   },
-  needLabel: {
+  growCost: {
+    textAlign: 'center',
     fontSize: 11,
-    letterSpacing: 0.5,
-  },
-  feedLink: {
-    fontSize: 11,
-    textDecorationLine: 'underline',
   },
 
   shop: {
@@ -278,6 +244,7 @@ const styles = StyleSheet.create({
     borderWidth: Border.hair,
     borderColor: theme.ink,
     borderRadius: 0,
+    backgroundColor: theme.background,
     paddingVertical: 5,
     paddingHorizontal: 8,
   },

@@ -81,22 +81,18 @@ export function sessionTypeLabel(type: StudySessionType): string {
  *
  * 덱·단어와 달리 계정당 하나뿐이라 tombstone이 필요 없다. 대신 `updatedAt`은
  * 그대로 두어 동기화 시 최신 승 판정을 같은 방식으로 쓴다.
+ *
+ * 재화는 코인 하나뿐이다. 포인트·밥·물·하루 1회 지급은 전부 없앴다
+ * (handoff/HANDOFF-character-update.md §0). 옛 저장본에 남아 있는
+ * `points`/`hunger`/`thirst`/`lastActiveDate`/`toys` 는 읽지 않고 버린다.
  */
 export interface Character {
   /** 사용자가 정한 이름. 정하기 전에는 빈 문자열 */
   name: string;
-  points: number;
+  /** 유일한 재화. 단어 하나를 공부할 때마다 1개 쌓인다. */
   coins: number;
-  /** 0~100 */
-  hunger: number;
-  /** 0~100 */
-  thirst: number;
-  /** 'YYYY-MM-DD'. 하루 1회 지급을 판정하는 기준 */
-  lastActiveDate: string | null;
-  /** 0~7 */
+  /** 0 ~ STAGES.length - 1 */
   stageIndex: number;
-  /** 보유 장난감 id */
-  toys: string[];
   /** 단계가 오르며 태어난 강아지 수 */
   puppies: number;
   updatedAt: string;

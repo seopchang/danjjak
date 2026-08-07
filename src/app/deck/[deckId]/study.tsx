@@ -25,7 +25,7 @@ export default function StudyModeScreen() {
   const allWords = useWordsStore((s) => s.words);
   const markStatus = useWordsStore((s) => s.markStatus);
   const addSession = useSessionsStore((s) => s.addSession);
-  const awardDaily = useCharacterStore((s) => s.awardDaily);
+  const addCoin = useCharacterStore((s) => s.addCoin);
 
   const isMemorize = mode === 'memorize';
   const targetStatus = isMemorize ? '미암기' : '암기완료';
@@ -74,8 +74,6 @@ export default function StudyModeScreen() {
         durationSeconds: Math.round((Date.now() - startedAt.current) / 1000),
         scopeLabel: `${isMemorize ? '암기' : '복습'} 테스트${favorites === '1' ? ' (즐겨찾기)' : ''}`,
       });
-      // 하루 1회만 실제로 지급된다 (§5.2).
-      awardDaily();
     }
     setFinished(true);
   };
@@ -83,7 +81,11 @@ export default function StudyModeScreen() {
   /** 카드가 빠져나간 뒤 실제 채점과 다음 카드 진입을 처리한다. */
   const commitAction = (isCorrect: boolean, direction: SlideDirection) => {
     const word = allWords.find((w) => w.id === queue[index]);
-    if (word) markStatus(word.id, isCorrect ? '암기완료' : '미암기');
+    if (word) {
+      markStatus(word.id, isCorrect ? '암기완료' : '미암기');
+      // 단어 하나를 넘길 때마다 코인 1개. 하루 상한 없이 즉시 지급한다.
+      addCoin();
+    }
 
     const nextCorrect = correctCount + (isCorrect ? 1 : 0);
     const nextIncorrect = incorrectCount + (isCorrect ? 0 : 1);

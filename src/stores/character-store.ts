@@ -7,31 +7,53 @@ import { Character } from '@/types';
 /**
  * 성장 캐릭터(강아지).
  *
- * 학습을 하루 한 번이라도 하면 포인트와 코인이 쌓이고, 며칠 쉬면 배고픔·갈증이 줄어든다.
+ * 재화는 코인 하나뿐이다. 단어를 하나 공부할 때마다 1개씩 즉시 쌓이고, 하루 상한은 없다.
+ * 승급은 자동이 아니라 사용자가 `키우기` 버튼을 눌러야 진행되며 그때 코인을 낸다.
+ * (handoff/HANDOFF-character-update.md §0, §1)
+ *
  * 덱·단어와 달리 계정당 하나뿐이라 목록 병합이 아니라 `updatedAt` 하나로 최신 승 판정을 한다.
  */
 
+/**
+ * 단계 그림. 배열 인덱스가 스펙의 `img` 값이다.
+ *
+ * 스펙은 0-based(`img: 0` ~ `img: 7`)로 쓰여 있는데 이 저장소의 파일명은
+ * 1-based(`dog-stage-1.png` ~ `dog-stage-8.png`)라, 여기서 한 번만 맞춰둔다.
+ * 6·7번째 그림(dog-stage-6/7)은 단계 축소로 더 이상 쓰이지 않지만 파일은 남겨둔다.
+ */
+const DOG_IMAGES: number[] = [
+  require('../../assets/illustrations/dog-stage-1.png'), // img 0
+  require('../../assets/illustrations/dog-stage-2.png'), // img 1
+  require('../../assets/illustrations/dog-stage-3.png'), // img 2
+  require('../../assets/illustrations/dog-stage-4.png'), // img 3
+  require('../../assets/illustrations/dog-stage-5.png'), // img 4
+  require('../../assets/illustrations/dog-stage-6.png'), // img 5 (미사용)
+  require('../../assets/illustrations/dog-stage-7.png'), // img 6 (미사용)
+  require('../../assets/illustrations/dog-stage-8.png'), // img 7
+];
+
 export interface Stage {
   name: string;
-  /** 이 단계가 되기 위해 필요한 누적 포인트 */
+  /** 이 단계에 이르기까지 필요한 누적 코인. 승급 비용은 다음 단계와의 차액이다. */
   min: number;
   image: number;
 }
 
-/** 매일 학습(+10P) 기준으로 마지막 단계까지 약 110일 */
+/**
+ * 6단계. 중간 두 단계(청년·성숙한 리트리버)는 그림 차이가 거의 없어 뺐다.
+ * 승급 비용은 차액이라 20 / 40 / 90 / 150 / 300 이 되고, 다 키우면 600코인 = 단어 600개다.
+ */
 export const STAGES: Stage[] = [
-  { name: '새끼 강아지', min: 0, image: require('../../assets/illustrations/dog-stage-1.png') },
-  { name: '아기 강아지', min: 20, image: require('../../assets/illustrations/dog-stage-2.png') },
-  { name: '걸음마 강아지', min: 60, image: require('../../assets/illustrations/dog-stage-3.png') },
-  { name: '어린 강아지', min: 150, image: require('../../assets/illustrations/dog-stage-4.png') },
-  { name: '청소년 리트리버', min: 300, image: require('../../assets/illustrations/dog-stage-5.png') },
-  { name: '청년 리트리버', min: 500, image: require('../../assets/illustrations/dog-stage-6.png') },
-  { name: '성숙한 리트리버', min: 750, image: require('../../assets/illustrations/dog-stage-7.png') },
-  { name: '든든한 리트리버', min: 1100, image: require('../../assets/illustrations/dog-stage-8.png') },
+  { name: '새끼 강아지', min: 0, image: DOG_IMAGES[0] },
+  { name: '아기 강아지', min: 20, image: DOG_IMAGES[1] },
+  { name: '걸음마 강아지', min: 60, image: DOG_IMAGES[2] },
+  { name: '어린 강아지', min: 150, image: DOG_IMAGES[3] },
+  { name: '청소년 리트리버', min: 300, image: DOG_IMAGES[4] },
+  { name: '든든한 리트리버', min: 600, image: DOG_IMAGES[7] },
 ];
 
-/** 이 단계부터는 동작 애니메이션에서 프레임을 갈아끼운다 (그 아래는 트랜스폼만) */
-export const ANIMATED_FROM_STAGE = 5;
+/** 이 단계부터는 동작 애니메이션에서 프레임을 갈아끼운다 (5단계 청소년 리트리버 = 인덱스 4) */
+export const ANIMATED_FROM_STAGE = 4;
 
 /** 동작 애니메이션 프레임 (240ms 간격 순환) */
 export const ACTION_FRAMES: number[] = [
@@ -50,6 +72,7 @@ export interface Toy {
   image: number;
 }
 
+/** 보유 개념이 없다. 누를 때마다 코인을 쓰고 강아지가 한 번 반응하고 끝이다. */
 export const TOYS: Toy[] = [
   { id: 'ball', cost: 8, image: require('../../assets/illustrations/toy-ball.png') },
   { id: 'bone', cost: 10, image: require('../../assets/illustrations/toy-bone.png') },
@@ -59,47 +82,47 @@ export const TOYS: Toy[] = [
   { id: 'plush', cost: 18, image: require('../../assets/illustrations/toy-plush.png') },
 ];
 
-const FEED_AMOUNT = 40;
-const FEED_COST = 1;
-/** 하루 쉴 때마다 배고픔·갈증이 줄어드는 양 */
-const DECAY_PER_DAY = 15;
-const POINTS_PER_DAY = 10;
-const COINS_PER_DAY = 5;
+/** 이 단계부터 자랄 때마다 강아지가 한 마리씩 늘어난다 (1-based 4단계 = 인덱스 3) */
+const PUPPY_FROM_STAGE = 3;
 
 export function initialCharacter(): Character {
   return {
     name: '',
-    points: 0,
     coins: 0,
-    hunger: 100,
-    thirst: 100,
-    lastActiveDate: null,
     stageIndex: 0,
-    toys: [],
     puppies: 0,
     updatedAt: new Date().toISOString(),
   };
 }
 
-export function stageIndexFor(points: number): number {
-  let index = 0;
-  for (let i = 0; i < STAGES.length; i++) {
-    if (points >= STAGES[i].min) index = i;
-  }
-  return index;
+/** 다음 단계로 올리는 데 드는 코인. 최고 단계면 null. */
+export function upgradeCost(stageIndex: number): number | null {
+  const current = STAGES[stageIndex];
+  const next = STAGES[stageIndex + 1];
+  if (!current || !next) return null;
+  return next.min - current.min;
 }
 
-/** 로컬 기준 오늘 날짜. toISOString()은 UTC라 자정 근처에서 하루가 어긋난다. */
-export function todayKey(date = new Date()): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
+function toCount(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
 }
 
-function daysBetween(from: string, to: string): number {
-  const diff = new Date(`${to}T00:00:00`).getTime() - new Date(`${from}T00:00:00`).getTime();
-  return Math.max(1, Math.round(diff / 86400000));
+/**
+ * 저장본·원격본을 현재 모델로 맞춘다.
+ *
+ * 옛 레코드에는 points/hunger/thirst/lastActiveDate/toys 가 남아 있는데 그냥 버린다.
+ * 단계 축소(8 → 6) 때문에 옛 stageIndex 가 6, 7이면 배열 밖이라 반드시 클램프해야 한다.
+ */
+function sanitize(raw: Partial<Character> | null | undefined): Character {
+  const base = initialCharacter();
+  if (!raw) return base;
+  return {
+    name: typeof raw.name === 'string' ? raw.name : base.name,
+    coins: toCount(raw.coins),
+    stageIndex: Math.min(toCount(raw.stageIndex), STAGES.length - 1),
+    puppies: toCount(raw.puppies),
+    updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : base.updatedAt,
+  };
 }
 
 /** 애니메이션을 몇 번 반복할지. 0이면 재생하지 않는다. */
@@ -111,10 +134,10 @@ interface CharacterState {
   dance: DanceRequest;
   requestDance: (times?: number) => void;
   setName: (name: string) => void;
-  /** 암기·복습·매치 세션이 완료되면 호출. 같은 날 두 번째부터는 아무 일도 하지 않는다. */
-  awardDaily: () => void;
-  feed: () => void;
-  water: () => void;
+  /** 단어 하나를 공부할 때마다 호출. 하루 상한 없이 즉시 쌓인다. */
+  addCoin: (count?: number) => void;
+  /** 키우기 버튼. 코인이 모자라거나 최고 단계면 아무 일도 하지 않고 false. */
+  growUp: () => boolean;
   buyToy: (toyId: string) => void;
   mergeRemote: (remote: Character | null) => void;
 }
@@ -135,71 +158,44 @@ export const useCharacterStore = create<CharacterState>()(
         }));
       },
 
-      awardDaily: () => {
+      addCoin: (count = 1) => {
+        if (count <= 0) return;
+        set((state) => ({
+          character: {
+            ...state.character,
+            coins: state.character.coins + count,
+            updatedAt: new Date().toISOString(),
+          },
+        }));
+      },
+
+      growUp: () => {
         const c = get().character;
-        const today = todayKey();
-        if (c.lastActiveDate === today) return;
+        const cost = upgradeCost(c.stageIndex);
+        if (cost == null || c.coins < cost) return false;
 
-        const daysSince = c.lastActiveDate ? daysBetween(c.lastActiveDate, today) : 1;
-        const decay = Math.min(100, daysSince * DECAY_PER_DAY);
-        const points = c.points + POINTS_PER_DAY;
-        const newStage = stageIndexFor(points);
-        const leveledUp = newStage > c.stageIndex;
-
+        const newStage = c.stageIndex + 1;
         set({
           character: {
             ...c,
-            points,
-            coins: c.coins + COINS_PER_DAY,
-            hunger: Math.max(0, c.hunger - decay),
-            thirst: Math.max(0, c.thirst - decay),
+            coins: c.coins - cost,
             stageIndex: newStage,
-            // 4단계부터는 단계가 오를 때마다 강아지가 한 마리씩 늘어난다.
-            puppies: c.puppies + (leveledUp && newStage >= 3 ? newStage - c.stageIndex : 0),
-            lastActiveDate: today,
+            puppies: c.puppies + (newStage >= PUPPY_FROM_STAGE ? 1 : 0),
             updatedAt: new Date().toISOString(),
           },
         });
-        get().requestDance(leveledUp ? 4 : 2);
-      },
-
-      feed: () => {
-        const c = get().character;
-        if (c.coins < FEED_COST || c.hunger >= 100) return;
-        set({
-          character: {
-            ...c,
-            coins: c.coins - FEED_COST,
-            hunger: Math.min(100, c.hunger + FEED_AMOUNT),
-            updatedAt: new Date().toISOString(),
-          },
-        });
-        get().requestDance(2);
-      },
-
-      water: () => {
-        const c = get().character;
-        if (c.coins < FEED_COST || c.thirst >= 100) return;
-        set({
-          character: {
-            ...c,
-            coins: c.coins - FEED_COST,
-            thirst: Math.min(100, c.thirst + FEED_AMOUNT),
-            updatedAt: new Date().toISOString(),
-          },
-        });
-        get().requestDance(2);
+        // 축하 동작은 변신 모달이 직접 연출한다. 여기서 requestDance 하지 않는다.
+        return true;
       },
 
       buyToy: (toyId) => {
         const c = get().character;
         const toy = TOYS.find((t) => t.id === toyId);
-        if (!toy || c.toys.includes(toyId) || c.coins < toy.cost) return;
+        if (!toy || c.coins < toy.cost) return;
         set({
           character: {
             ...c,
             coins: c.coins - toy.cost,
-            toys: [...c.toys, toyId],
             updatedAt: new Date().toISOString(),
           },
         });
@@ -208,19 +204,20 @@ export const useCharacterStore = create<CharacterState>()(
 
       mergeRemote: (remote) => {
         if (!remote) return;
+        const clean = sanitize(remote);
         set((state) =>
-          remote.updatedAt > state.character.updatedAt ? { character: remote } : state
+          clean.updatedAt > state.character.updatedAt ? { character: clean } : state
         );
       },
     }),
     {
       name: 'vocadeck-character',
       storage: createJSONStorage(() => AsyncStorage),
-      // 옛 저장본에 필드가 없을 수 있으므로 기본값 위에 덮어쓴다.
+      // 옛 저장본은 필드 구성이 다르므로 항상 현재 모델로 정리해서 올린다.
       merge: (persisted, current) => ({
         ...current,
         ...(persisted as object),
-        character: { ...initialCharacter(), ...((persisted as CharacterState)?.character ?? {}) },
+        character: sanitize((persisted as CharacterState)?.character),
       }),
     }
   )
