@@ -23,11 +23,11 @@ export interface DiagnosticLine {
 const TIMEOUT_MS = 10000;
 
 /** 응답이 없어도 화면이 영영 "실행 중"으로 남지 않게 시간을 끊는다. */
-async function fetchWithTimeout(url: string): Promise<Response> {
+async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
-    return await fetch(url, { method: 'GET', signal: controller.signal });
+    return await fetch(url, { method: 'GET', ...init, signal: controller.signal });
   } finally {
     clearTimeout(timer);
   }
@@ -151,7 +151,76 @@ async function checkClockSkew(): Promise<DiagnosticLine> {
   }
 }
 
+/**
+ * ④ 실제 로그인 엔드포인트에 직접 POST — 이게 결정적인 단계다.
+ *
+ * ③의 `recaptchaParams` 는 평범한 GET 이라 로그인 경로를 타지 않는다. 네트워크만 살아 있으면
+ * 무조건 통과하므로 "웹은 되는데 APK만 실패"를 전혀 가려내지 못한다(실제로 그렇게 통과했다).
+ *
+ * 여기서는 SDK 를 거치지 않고 로그인 REST 엔드포인트에 **가짜 자격증명**으로 직접 쏜다.
+ * 계정 정보가 필요 없고, 응답이 오기만 하면 그 자체가 판정이 된다.
+ *
+ *  - `HTTP 400 INVALID_LOGIN_CREDENTIALS`
+ *      → 네트워크·TLS·API 키·헤더가 전부 정상이고 구글까지 왕복이 된다는 뜻이다.
+ *        그런데도 SDK 로그인이 `auth/network-request-failed` 로 실패한다면
+ *        원인은 네트워크가 아니라 **SDK 내부**다. reCAPTCHA 검증처럼 DOM 이 필요한 절차가
+ *        React Native 에 없어서 깨지는 경우가 여기 해당한다.
+ *  - 예외 / 타임아웃
+ *      → 원인은 **네트워크 계층**이다. 이 경우 ②가 통과했는데 여기서 막힌 것이므로
+ *        호스트(identitytoolkit) 차단이나 프록시를 의심할 것.
+ */
+async function checkSignInEndpoint(): Promise<DiagnosticLine> {
+  const { apiKey } = getFirebaseConfigSnapshot();
+  const key = apiKey.trim();
+  if (!key) {
+    return { label: '로그인 엔드포인트', detail: 'apiKey가 없어 건너뜀', ok: false };
+  }
+
+  const started = Date.now();
+  try {
+    const res = await fetchWithTimeout(
+      `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${encodeURIComponent(key)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // 실제 계정이 아니다. 왕복이 되는지만 본다.
+        body: JSON.stringify({
+          email: 'diagnostic-probe@example.com',
+          password: 'not-a-real-password',
+          returnSecureToken: true,
+        }),
+      }
+    );
+    const ms = Date.now() - started;
+    let reason = '';
+    try {
+      const json = (await res.json()) as { error?: { message?: string } };
+      reason = json.error?.message ?? '';
+    } catch {
+      reason = '(본문 읽기 실패)';
+    }
+    // 자격증명 거부는 "닿았다"는 뜻이라 성공으로 친다.
+    const reached = reason.includes('INVALID_LOGIN_CREDENTIALS') || reason.includes('EMAIL_NOT_FOUND');
+    return {
+      label: '로그인 엔드포인트',
+      detail: `HTTP ${res.status} (${ms}ms) ${reason}${reached ? ' ← 왕복 정상, 원인은 SDK 내부' : ''}`,
+      ok: reached,
+    };
+  } catch (e) {
+    return {
+      label: '로그인 엔드포인트',
+      detail: `${describeThrown(e)} (${Date.now() - started}ms) ← 네트워크 계층 문제`,
+      ok: false,
+    };
+  }
+}
+
 export async function runLoginDiagnostics(): Promise<DiagnosticLine[]> {
-  const network = await Promise.all([checkInternet(), checkClockSkew(), checkAuthEndpoint()]);
+  const network = await Promise.all([
+    checkInternet(),
+    checkClockSkew(),
+    checkAuthEndpoint(),
+    checkSignInEndpoint(),
+  ]);
   return [...configLines(), ...network];
 }
