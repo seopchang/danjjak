@@ -9,6 +9,7 @@ import { Border, Colors } from '@/constants/theme';
 import { useDecksStore } from '@/stores/decks-store';
 import { deckSessions, useSessionsStore } from '@/stores/sessions-store';
 import { deckWords, useWordsStore } from '@/stores/words-store';
+import { sessionTypeLabel } from '@/types';
 
 const theme = Colors.light;
 
@@ -82,8 +83,9 @@ export default function StatsScreen() {
             <View key={session.id} style={styles.sessionRow}>
               <View style={styles.sessionHead}>
                 <View style={styles.typeBadge}>
+                  {/* 옛 이름('리콜')으로 저장된 기록도 '매치'로 보여준다 */}
                   <ThemedText type="labelKo" style={styles.typeBadgeText}>
-                    {session.type}
+                    {sessionTypeLabel(session.type)}
                   </ThemedText>
                 </View>
                 <ThemedText type="meta" themeColor="textSecondary" style={styles.grow}>
